@@ -11,7 +11,7 @@ const identitySchema = new Schema({
     provider: {
         type: String,
         required: true,
-        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin', 'custom'],
+        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin'],
         index: true
     },
     provider_id: {
@@ -24,46 +24,21 @@ const identitySchema = new Schema({
         required: true
     },
     provider_name: {
-        type: String,
-        required: true
+        type: String
     },
+
    
-    // OAuth 2.0 Credentials
-    access_token: {
-        type: String,
-        required: true
-    },
     refresh_token: {
         type: String
     },
-    token_type: {
-        type: String,
-        default: 'Bearer'
-    },
     expires_at: {
-        type: Date,
-        index: true
+        type: Date
     },
     scope: {
         type: [String],
         default: []
     },
-    // OAuth 2.0 Client Information
-    client_id: {
-        type: String,
-        required: true
-    },
-    // Additional OAuth metadata
-    id_token: {
-        type: String // For OpenID Connect
-    },
-    token_endpoint: {
-        type: String
-    },
-    authorization_endpoint: {
-        type: String
-    },
-    // Connection status
+
     is_active: {
         type: Boolean,
         default: true
@@ -76,24 +51,15 @@ const identitySchema = new Schema({
         type: Date,
         default: Date.now
     },
-    // Security and audit
-    connection_metadata: {
-        ip_address: String,
-        user_agent: String,
-        location: {
-            country: String,
-            city: String
-        }
-    },
-    // Provider-specific data
+
     provider_data: {
         type: Map,
         of: mongoose.Schema.Types.Mixed,
-        default: new Map()
+        default: {}
     }
-}, {
-    timestamps: true
-});
+
+}, { timestamps: true });
+
 
 // Compound indexes for performance and uniqueness
 identitySchema.index({ provider: 1, provider_id: 1 }, { unique: true });
@@ -101,15 +67,15 @@ identitySchema.index({ user_id: 1, provider: 1 });
 identitySchema.index({ user_id: 1, is_primary: 1 });
 identitySchema.index({ expires_at: 1 });
 
-// Virtual for checking if token is expired
+// Virtual for checking if refresh token is expired
 identitySchema.virtual('is_token_expired').get(function() {
     if (!this.expires_at) return false;
     return new Date() > this.expires_at;
 });
 
 // Methods
-identitySchema.methods.isTokenValid = function() {
-    return this.is_active && !this.is_token_expired;
+identitySchema.methods.isRefreshTokenValid = function() {
+    return this.is_active && !this.is_token_expired && this.refresh_token;
 };
 
 identitySchema.methods.updateLastUsed = function() {
@@ -117,8 +83,23 @@ identitySchema.methods.updateLastUsed = function() {
     return this.save();
 };
 
-identitySchema.methods.refreshAccessToken = async function(newTokenData) {
-    this.access_token = newTokenData.access_token;
+identitySchema.methods.getAccessToken = async function() {
+    // This method would typically call the OAuth provider's token endpoint
+    // to exchange the refresh_token for a new access_token
+    if (!this.isRefreshTokenValid()) {
+        throw new Error('Invalid or expired refresh token');
+    }
+    
+    // Return the refresh token for external token exchange
+    // The actual access token request should be handled by the service layer
+    return {
+        refresh_token: this.refresh_token,
+        provider: this.provider,
+        expires_at: this.expires_at
+    };
+};
+
+identitySchema.methods.updateTokenData = async function(newTokenData) {
     if (newTokenData.refresh_token) {
         this.refresh_token = newTokenData.refresh_token;
     }
@@ -128,7 +109,7 @@ identitySchema.methods.refreshAccessToken = async function(newTokenData) {
     if (newTokenData.scope) {
         this.scope = Array.isArray(newTokenData.scope) ? newTokenData.scope : newTokenData.scope.split(' ');
     }
-    this.last_used = new Date();
+    this.updatedAt = new Date();
     return this.save();
 };
 
@@ -138,20 +119,14 @@ identitySchema.methods.revoke = function() {
 };
 
 identitySchema.methods.encryptSensitiveData = function() {
-    // Encrypt access_token and refresh_token before saving
-    if (this.access_token && !this.access_token.startsWith('enc:')) {
-        this.access_token = 'enc:' + this.encrypt(this.access_token);
-    }
+    // Encrypt refresh_token before saving
     if (this.refresh_token && !this.refresh_token.startsWith('enc:')) {
         this.refresh_token = 'enc:' + this.encrypt(this.refresh_token);
     }
 };
 
 identitySchema.methods.decryptSensitiveData = function() {
-    // Decrypt access_token and refresh_token after retrieval
-    if (this.access_token && this.access_token.startsWith('enc:')) {
-        this.access_token = this.decrypt(this.access_token.substring(4));
-    }
+    // Decrypt refresh_token after retrieval
     if (this.refresh_token && this.refresh_token.startsWith('enc:')) {
         this.refresh_token = this.decrypt(this.refresh_token.substring(4));
     }
@@ -220,7 +195,7 @@ identitySchema.statics.setPrimaryIdentity = async function(userId, identityId) {
     );
 };
 
-identitySchema.statics.cleanupExpiredTokens = function() {
+identitySchema.statics.cleanupExpiredRefreshTokens = function() {
     return this.updateMany(
         { 
             expires_at: { $lt: new Date() },
@@ -239,7 +214,7 @@ identitySchema.statics.revokeAllUserIdentities = function(userId) {
 
 // Pre-save middleware for encryption
 identitySchema.pre('save', function(next) {
-    if (this.isModified('access_token') || this.isModified('refresh_token')) {
+    if (this.isModified('refresh_token')) {
         this.encryptSensitiveData();
     }
     next();
