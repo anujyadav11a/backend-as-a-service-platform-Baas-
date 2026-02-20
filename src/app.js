@@ -3,8 +3,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser'; 
 import googleOAuthRoutes from './routes/googleOAuth.routes.js';
 import userRoutes from './routes/user.routes.js';
-import { sessionMiddleware } from './middleware/session.middleware.js';
-import { testOAuth } from './controllers/test.controller.js';
+import { authMiddleware } from './middleware/auth.middleware.js';
+
 import { logger } from './utils/Logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
 import { refreshTokenMiddleware } from './middleware/auth.middleware.js';
@@ -24,11 +24,10 @@ app.use(express.json({limit:"10kb"}))
 app.use(express.urlencoded({limit:"10kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
-app.use(sessionMiddleware)
+app.use(authMiddleware)
 app.use(refreshTokenMiddleware) // Auto-refresh tokens
 
-// Test route
-app.get('/test-oauth', testOAuth);
+
 
 // Routes
 app.use('/auth', googleOAuthRoutes);

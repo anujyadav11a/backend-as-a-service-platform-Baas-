@@ -7,6 +7,7 @@ import { ApiError } from '../utils/apierror.js';
 import { ApiResponse } from '../utils/apiresponse.js';
 import { logger } from '../utils/Logger.js';
 import { ValidationHelper } from '../utils/validate.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 export class GoogleOAuthController {
     constructor() {
@@ -21,7 +22,7 @@ export class GoogleOAuthController {
     /**
      * Generate Google OAuth authorization URL and redirect
      */
-    redirectToGoogle = asyncHandler(async (req, res) => {
+    async redirectToGoogle(req, res) {
         logger.info('Initiating Google OAuth flow', { 
             ip: req.ip, 
             userAgent: req.headers['user-agent'] 
@@ -71,12 +72,12 @@ export class GoogleOAuthController {
         );
 
         res.status(response.statuscode).json(response);
-    });
+    }
 
     /**
      * Handle Google OAuth callback
      */
-    handleCallback = asyncHandler(async (req, res) => {
+    async handleCallback(req, res) {
         const { code, state, error } = req.query;
 
         logger.info('Handling OAuth callback', { 
@@ -128,7 +129,7 @@ export class GoogleOAuthController {
         );
 
         res.status(response.statuscode).json(response);
-    });
+    }
 
     /**
      * Exchange authorization code for access and refresh tokens
@@ -433,7 +434,7 @@ export class GoogleOAuthController {
     /**
      * Refresh Google access token using refresh token
      */
-    refreshAccessToken = asyncHandler(async (req, res) => {
+    async refreshAccessToken(req, res) {
         const { identityId } = req.params;
         
         // Validate identity ID
@@ -495,12 +496,12 @@ export class GoogleOAuthController {
             logger.error('Token refresh network error', { identityId, error: error.message });
             throw ApiError.serviceUnavailable('Failed to connect to Google OAuth service');
         }
-    });
+    }
 
     /**
      * Revoke Google OAuth access
      */
-    revokeAccess = asyncHandler(async (req, res) => {
+    async revokeAccess(req, res) {
         const { identityId } = req.params;
         
         // Validate identity ID
@@ -554,7 +555,7 @@ export class GoogleOAuthController {
             });
             throw ApiError.internal(`Failed to revoke access: ${error.message}`);
         }
-    });
+    }
 }
 
 export const googleOAuthController = new GoogleOAuthController();
