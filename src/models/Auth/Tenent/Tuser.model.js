@@ -2,17 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-/**
- * Tenant User Model
- * 
- * Tenant users are end-users of applications built using our database service.
- * They authenticate using API keys provided by console users (project owners).
- * 
- * Flow:
- * 1. Console user creates a project → gets project_id + api_key
- * 2. Console user shares credentials with their app
- * 3. App users register/login as tenant users using those credentials
- */
+
 
 const tenantUserSchema = new Schema({
     // Basic User Information
@@ -70,16 +60,16 @@ tenantUserSchema.virtual('full_name').get(function() {
 });
 
 // Pre-save Middleware - Hash password before saving
-tenantUserSchema.pre('save', async function(next) {
+tenantUserSchema.pre('save', async function() {
     // Only hash password if it's modified (new or changed)
-    if (!this.isModified('password')) return next();
+    if (!this.isModified('password')) return ;
     
     try {
         // Hash password with salt rounds of 10
         this.password = await bcrypt.hash(this.password, 10);
         next();
     } catch (error) {
-        next(error);
+       
     }
 });
 
