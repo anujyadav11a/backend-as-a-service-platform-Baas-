@@ -6,7 +6,8 @@ import { Project } from "../models/Database/project.model.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { ValidationHelper } from "../utils/validate.js";
 import { logger } from "../utils/Logger.js";
-import crypto from "crypto";
+import { parseUserAgent,getLocationFromIP } from "./User.controller.js";
+
 
 /**
  * Generate access and refresh tokens for tenant user
@@ -45,21 +46,27 @@ const createTenantSession = async (user, req, refreshToken) => {
         // Extract device information
         const userAgent = req.headers['user-agent'] || 'Unknown';
         const deviceInfo = parseUserAgent(userAgent);
-        
+
         // Get IP address
         const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
-        
+
+        // Get location data and ensure ip_address is included
+        const locationData = await getLocationFromIP(ipAddress);
+
         // Create session
         const sessionData = {
             user_id: user._id,
             project_id: user.project_id,
             refresh_token: refreshToken,
             device_info: deviceInfo,
-            location: await getLocationFromIP(ipAddress)
+            location: {
+                ip_address: ipAddress,
+                ...locationData
+            }
         };
 
         const session = await TenantSession.createSession(sessionData);
-        
+
         logger.info('Tenant session created', {
             userId: user._id,
             projectId: user.project_id,
@@ -77,19 +84,22 @@ const createTenantSession = async (user, req, refreshToken) => {
         });
         throw ApiError.internal("Failed to create user session");
     }
-};
+}
 
 /**
  * Register tenant user
  */
 const tenantRegister = asyncHandler(async (req, res) => {
-    const { username, email, password, project_id, api_key } = req.body;
-
-    logger.info('Tenant user registration attempt', { email, project_id });
+    const { username, email, password } = req.body;
+    const { project_id, api_key} = req.headers;
+    // Also try reading uppercase versions as fallback
+    const projectId = project_id || req.headers['PROJECT_ID'] || req.headers['project-id'] || req.headers['x-frontier-project-id'];
+    const apiKey = api_key || req.headers['API_KEY'] || req.headers['api-key'] || req.headers['x-frontier-api-key'];
 
     // Validate required fields
-    ValidationHelper.validateRequired(['username', 'email', 'password', 'project_id', 'api_key'], req.body);
-
+    ValidationHelper.validateRequired(['username', 'email', 'password'], req.body);
+    ValidationHelper.validateRequired(['project_id', 'api_key'], { project_id: projectId, api_key: apiKey });
+     
     // Validate input formats
     ValidationHelper.validateEmail(email);
     ValidationHelper.validatePassword(password);
@@ -101,35 +111,35 @@ const tenantRegister = asyncHandler(async (req, res) => {
 
     // Verify project exists and API key is valid
     const project = await Project.findOne({ 
-        project_id: project_id, 
-        api_key: api_key, 
+        project_id: projectId, 
+        api_key: apiKey, 
         status: 'active' 
     });
     
     if (!project) {
         logger.warn('Registration attempt with invalid project credentials', { 
-            project_id, 
+            project_id: projectId, 
             email: sanitizedEmail 
         });
         throw ApiError.unauthorized("Invalid project credentials");
     }
 
     // Check if user already exists in this project
-    const userExist = await TenantUser.findByProjectAndEmail(project_id, sanitizedEmail);
+    const userExist = await TenantUser.findByProjectAndEmail(projectId, sanitizedEmail);
     if (userExist) {
         logger.warn('Registration attempt with existing email in project', { 
             email: sanitizedEmail, 
-            project_id 
+            project_id: projectId 
         });
         throw ApiError.conflict("User already exists with this email in this project");
     }
 
     // Check if username is taken in this project
-    const usernameExist = await TenantUser.findByProjectAndUsername(project_id, sanitizedUsername);
+    const usernameExist = await TenantUser.findByProjectAndUsername(projectId, sanitizedUsername);
     if (usernameExist) {
         logger.warn('Registration attempt with existing username in project', { 
             username: sanitizedUsername, 
-            project_id 
+            project_id: projectId 
         });
         throw ApiError.conflict("Username already taken in this project");
     }
@@ -139,7 +149,7 @@ const tenantRegister = asyncHandler(async (req, res) => {
         username: sanitizedUsername,
         email: sanitizedEmail,
         password,
-        project_id
+        project_id: projectId
     });
 
     const createdUser = await TenantUser.findById(user._id).select("-password");
@@ -152,7 +162,7 @@ const tenantRegister = asyncHandler(async (req, res) => {
     logger.info('Tenant user registered successfully', { 
         userId: createdUser._id, 
         email: sanitizedEmail,
-        project_id
+        project_id: projectId
     });
 
     const response = new ApiResponse(201, createdUser, "User registered successfully");
@@ -163,7 +173,8 @@ const tenantRegister = asyncHandler(async (req, res) => {
  * Login tenant user
  */
 const tenantLogin = asyncHandler(async (req, res) => {
-    const { email, password, project_id, api_key } = req.body;
+    const { email, password } = req.body;
+    const { project_id, api_key } = req.headers;
 
     logger.info('Tenant user login attempt', { 
         email, 
@@ -173,7 +184,8 @@ const tenantLogin = asyncHandler(async (req, res) => {
     });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['email', 'password', 'project_id', 'api_key'], req.body);
+    ValidationHelper.validateRequired(['email', 'password'], req.body);
+    ValidationHelper.validateRequired(['project_id', 'api_key'], req.headers);
     ValidationHelper.validateEmail(email);
 
     // Sanitize email
