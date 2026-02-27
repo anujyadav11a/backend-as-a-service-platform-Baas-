@@ -7,6 +7,54 @@ import { ValidationHelper } from "../utils/validate.js";
 import { logger } from "../utils/Logger.js";
 import crypto from "crypto";
 
+/**
+ * Parse user agent for device information
+ */
+ export const parseUserAgent = (userAgent) => {
+    // Simple user agent parsing - you might want to use a library like 'ua-parser-js'
+    const isMobile = /Mobile|Android|iPhone|iPad/.test(userAgent);
+    const isTablet = /iPad|Tablet/.test(userAgent);
+    
+    let deviceType = 'desktop';
+    if (isTablet) deviceType = 'tablet';
+    else if (isMobile) deviceType = 'mobile';
+    
+    return {
+        browser: extractBrowser(userAgent),
+        os: extractOS(userAgent),
+        device_type: deviceType
+    };
+};
+
+ export const extractBrowser = (userAgent) => {
+    if (userAgent.includes('Chrome')) return 'Chrome';
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Safari')) return 'Safari';
+    if (userAgent.includes('Edge')) return 'Edge';
+    return 'Unknown';
+};
+
+ export const extractOS = (userAgent) => {
+    if (userAgent.includes('Windows')) return 'Windows';
+    if (userAgent.includes('Mac')) return 'macOS';
+    if (userAgent.includes('Linux')) return 'Linux';
+    if (userAgent.includes('Android')) return 'Android';
+    if (userAgent.includes('iOS')) return 'iOS';
+    return 'Unknown';
+};
+
+/**
+ * Get location from IP (placeholder - integrate with IP geolocation service)
+ */
+ export const getLocationFromIP = async (ipAddress) => {
+    // Placeholder - integrate with services like MaxMind, IPStack, etc.
+    return {
+        country: 'Unknown',
+        city: 'Unknown',
+        timezone: 'Unknown'
+    };
+};
+
 const generateAccessandRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
