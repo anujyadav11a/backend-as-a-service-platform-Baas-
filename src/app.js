@@ -15,7 +15,8 @@ const app = express();
 
 const Options={
     origin:process.env.CORS_ORIGIN,
-    Credential:true
+    credentials:true,
+    allowedHeaders:"*"
 }
 
 // Request logging middleware
