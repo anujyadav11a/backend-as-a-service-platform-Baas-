@@ -9,13 +9,15 @@ import { mysqlPool } from "../../db/db.js";
  * Create a new database
  */
 const createDatabase = asyncHandler(async (req, res) => {
-    const { name, project_id } = req.body;
+    const { name,  } = req.body;
+    const {project_id}= req.headers;
     const userId = req.user?.id;
 
     logger.info('Creating new database', { userId, name, project_id });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['name', 'project_id'], req.body);
+    ValidationHelper.validateRequired(['name'], req.body);
+    ValidationHelper.validateRequired(['project_id'], req.headers);
     ValidationHelper.validateStringLength(name, 'name', 1, 255);
     ValidationHelper.validateStringLength(project_id, 'project_id', 1, 255);
 
