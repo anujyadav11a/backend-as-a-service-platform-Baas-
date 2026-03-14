@@ -9,7 +9,8 @@ import { mysqlPool } from "../../db/db.js";
  * Add a new column (attribute) to a collection
  */
 const addColumn = asyncHandler(async (req, res) => {
-    const { collection_id, name, type, required = false, project_id } = req.body;
+    const { collection_id, name, type, required = false } = req.body;
+    const {project_id}= req.headers;
 
     logger.info('Adding new column to collection', { 
         collection_id, 
@@ -20,8 +21,9 @@ const addColumn = asyncHandler(async (req, res) => {
     });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['collection_id', 'name', 'type', 'project_id'], req.body);
-
+    ValidationHelper.validateRequired(['collection_id', 'name', 'type'], req.body);
+    ValidationHelper.validateRequired(['project_id'], req.headers);
+    
     // Sanitize inputs
     const sanitizedName = ValidationHelper.sanitizeInput(name.trim());
     const sanitizedType = ValidationHelper.sanitizeInput(type.trim().toUpperCase());
