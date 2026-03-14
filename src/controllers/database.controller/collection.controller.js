@@ -10,13 +10,15 @@ import { v4 as uuidv4 } from 'uuid';
  * Create a new collection
  */
 const createCollection = asyncHandler(async (req, res) => {
-    const { database_id, name, project_id } = req.body;
+    const { database_id, name,  } = req.body;
+    const {project_id}= req.headers;
     const userId = req.user?.id;
 
     logger.info('Creating new collection', { userId, name, database_id, project_id });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['database_id', 'name', 'project_id'], req.body);
+    ValidationHelper.validateRequired(['database_id', 'name'], req.body);
+    ValidationHelper.validateRequired(['project_id'], req.headers);
     ValidationHelper.validateStringLength(name, 'name', 1, 255);
     ValidationHelper.validateStringLength(project_id, 'project_id', 1, 255);
 
