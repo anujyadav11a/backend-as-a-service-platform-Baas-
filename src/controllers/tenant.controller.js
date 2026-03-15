@@ -292,8 +292,7 @@ const tenantLogin = asyncHandler(async (req, res) => {
  */
 const tenantLogout = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.tenantRefreshToken;
-   
-    const userId = req.user?.id; // Assuming you have tenant auth middleware that sets req.user
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
 
     logger.info('Tenant user logout attempt', { userId, hasRefreshToken: !!refreshToken });
 
@@ -332,6 +331,7 @@ const tenantLogout = asyncHandler(async (req, res) => {
         .status(response.statuscode)
         .clearCookie("tenantRefreshToken", cookieOptions)
         .clearCookie("tenantAccessToken", cookieOptions)
+        .clearCookie("sessionId", cookieOptions)
         .json(response);
 });
 
@@ -341,14 +341,18 @@ const tenantLogout = asyncHandler(async (req, res) => {
  * Get tenant user's active sessions
  */
 const getTenantSessions = asyncHandler(async (req, res) => {
-    const sessionId = req.cookie?.session._id;
-   
+    const userId = req.user?.id || req.user?._id;
+    const projectId = req.user?.project_id;
 
-    if (!sessionId) {
+    if (!userId) {
         throw ApiError.unauthorized("Authentication required");
     }
 
-    const sessions = await TenantSession.findActiveSessions(sessionId);
+    // Find all active sessions for this user
+    const sessions = await TenantSession.find({
+        user_id: userId,
+        status: 'active'
+    }).sort({ login_time: -1 });
 
     const sessionData = sessions.map(session => ({
         id: session._id,
@@ -357,12 +361,12 @@ const getTenantSessions = asyncHandler(async (req, res) => {
         login_time: session.login_time,
         last_activity: session.last_activity,
         expires_at: session.expires_at,
-        is_current: req.cookies?.tenantRefreshToken === session.refresh_token
+        is_current: req.cookies?.sessionId === session._id.toString()
     }));
 
     logger.info('Retrieved tenant user sessions', { 
         userId, 
-        projectId: req.user?.project_id,
+        projectId,
         sessionCount: sessions.length 
     });
 
@@ -375,7 +379,7 @@ const getTenantSessions = asyncHandler(async (req, res) => {
  */
 const revokeTenantSession = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
 
     ValidationHelper.validateObjectId(sessionId, 'Session ID');
 
@@ -406,8 +410,9 @@ const revokeTenantSession = asyncHandler(async (req, res) => {
  * Get current tenant user profile
  */
 const getCurrentTenantUser = asyncHandler(async (req, res) => {
-    const userId = req.user?.id; // From tenant auth middleware
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
     const projectId = req.user?.project_id;
+   
 
     if (!userId) {
         throw ApiError.unauthorized("Authentication required");
