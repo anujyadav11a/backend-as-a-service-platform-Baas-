@@ -7,10 +7,10 @@ import projectRoutes from './routes/project.routes.js';
 import tenantUserroute from './routes/tuser.route.js';
 import databaseRouter from './routes/database.route/database.route.js';
 
-
 import { logger } from './utils/Logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
 import { refreshTokenMiddleware } from './middleware/auth.middleware.js';
+import { tenantRefreshTokenMiddleware } from './middleware/tenantAuth.middleware.js';
 
 const app = express();
 
@@ -29,9 +29,9 @@ app.use(express.urlencoded({limit:"10kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
 
-app.use(refreshTokenMiddleware) // Auto-refresh tokens
-
-
+// Auto-refresh tokens for both console and tenant users
+app.use(refreshTokenMiddleware)
+app.use(tenantRefreshTokenMiddleware)
 
 // Routes
 app.use('/auth', googleOAuthRoutes);
