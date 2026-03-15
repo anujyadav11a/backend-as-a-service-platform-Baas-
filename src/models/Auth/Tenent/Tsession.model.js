@@ -145,6 +145,22 @@ tenantSessionSchema.pre('save', async function() {
 // Instance Methods
 
 /**
+ * Check if session has expired
+ * @returns {boolean} - True if session is expired
+ */
+tenantSessionSchema.methods.isExpired = function() {
+    return this.expires_at < new Date() || this.status !== 'active';
+};
+
+/**
+ * Update last activity timestamp
+ */
+tenantSessionSchema.methods.updateActivity = async function() {
+    this.last_activity = new Date();
+    return await this.save();
+};
+
+/**
  * Generate unique session ID
  * @returns {string} - Unique session identifier
  */
