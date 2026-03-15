@@ -44,6 +44,9 @@ const createDatabase = asyncHandler(async (req, res) => {
         const [createdRows] = await mysqlPool.promise().execute(selectQuery, [result.insertId]);
         const createdDatabase = createdRows[0];
 
+        // Store database ID in session for next API calls
+        req.session.databaseId = createdDatabase.id;
+
         logger.info('Database created successfully', { 
             databaseId: createdDatabase.id,
             name: createdDatabase.name,
@@ -78,7 +81,72 @@ const createDatabase = asyncHandler(async (req, res) => {
         throw ApiError.internal('Failed to create database');
     }
 });
+/**
+ * Delete a database by ID
+ */
+const deleteDatabase = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    logger.info('Deleting database', { databaseId: id, userId });
+
+    // Validate required fields
+    ValidationHelper.validateRequired(['id'], req.params);
+    ValidationHelper.validateStringLength(id, 'id', 1, 255);
+
+    // Sanitize inputs
+    const sanitizedId = ValidationHelper.sanitizeInput(id);
+
+    try {
+        // Check if database exists
+        const checkQuery = 'SELECT id, name, project_id FROM databasess WHERE id = ?';
+        const [existingRows] = await mysqlPool.promise().execute(checkQuery, [sanitizedId]);
+
+        if (existingRows.length === 0) {
+            throw ApiError.notFound('Database not found');
+        }
+
+        const database = existingRows[0];
+
+        // Delete the database record
+        const deleteQuery = 'DELETE FROM databasess WHERE id = ?';
+        const [result] = await mysqlPool.promise().execute(deleteQuery, [sanitizedId]);
+
+        logger.info('Database deleted successfully', { 
+            databaseId: database.id,
+            name: database.name,
+            project_id: database.project_id,
+            userId 
+        });
+
+        const response = new ApiResponse(
+            200,
+            {
+                id: database.id,
+                name: database.name,
+                project_id: database.project_id
+            },
+            'Database deleted successfully'
+        );
+
+        res.status(response.statuscode).json(response);
+
+    } catch (error) {
+        logger.error('Error deleting database', { 
+            error: error.message, 
+            databaseId: sanitizedId,
+            userId 
+        });
+        
+        // Re-throw ApiError instances, wrap others
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw ApiError.internal('Failed to delete database');
+    }
+});
 
 export {
-    createDatabase
+    createDatabase,
+    deleteDatabase
 };
