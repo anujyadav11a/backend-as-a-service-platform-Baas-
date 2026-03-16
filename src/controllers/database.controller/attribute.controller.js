@@ -9,25 +9,33 @@ import { mysqlPool } from "../../db/db.js";
  * Add a new column (attribute) to a collection
  */
 const addColumn = asyncHandler(async (req, res) => {
-    const { collection_id, name, type, required = false } = req.body;
-    const {project_id}= req.headers;
+    const {  name, type, required = false } = req.body;
+    const { collection_id } = req.params || req.session.collectionId;
+    const {project_id}= req.session.project_id;
+    const {databaseId}= req.params || req.session.databaseId;
 
     logger.info('Adding new column to collection', { 
         collection_id, 
         name, 
         type, 
         required, 
-        project_id 
+        project_id,
+        databaseId
+
     });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['collection_id', 'name', 'type'], req.body);
-    ValidationHelper.validateRequired(['project_id'], req.headers);
+    ValidationHelper.validateRequired([ 'name', 'type'], req.body);
+    ValidationHelper.validateRequired(['collection_id'], req.params|| req.session.collectionId);
+    ValidationHelper.validateRequired(['project_id'], req.session.project_id);
+    ValidationHelper.validateRequired(['databaseId'], req.params || req.session.databaseId);
     
     // Sanitize inputs
     const sanitizedName = ValidationHelper.sanitizeInput(name.trim());
     const sanitizedType = ValidationHelper.sanitizeInput(type.trim().toUpperCase());
     const sanitizedCollectionId = ValidationHelper.sanitizeInput(collection_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedDatabaseId = ValidationHelper.sanitizeInput(databaseId.trim());
 
    
 
@@ -108,8 +116,8 @@ const addColumn = asyncHandler(async (req, res) => {
     try {
         // Insert new attribute directly
         const [result] = await mysqlPool.promise().execute(
-            'INSERT INTO attributes (collection_id, name, type, required, project_id) VALUES (?, ?, ?, ?, ?)',
-            [sanitizedCollectionId, sanitizedName, sanitizedType, required ? 1 : 0, project_id]
+            'INSERT INTO attributes (collection_id, database_id, name, type, required, project_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [sanitizedCollectionId,sanitizedDatabaseId, sanitizedName,sanitizedProjectId, sanitizedType, required ? 1 : 0, project_id]
         );
 
         // Get the created attribute
