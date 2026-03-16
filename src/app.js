@@ -6,6 +6,7 @@ import userRoutes from './routes/user.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import tenantUserroute from './routes/tuser.route.js';
 import databaseRouter from './routes/database.route/database.route.js';
+import collectionRouter from './routes/database.route/collection.route.js';
 
 import { logger } from './utils/Logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
@@ -39,7 +40,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tenantuser', tenantUserroute)
 app.use('/api/v1/database',databaseRouter);
-
+app.use('/api/v1/collection', collectionRouter);
 // 404 handler
 app.use(notFoundHandler);
 
