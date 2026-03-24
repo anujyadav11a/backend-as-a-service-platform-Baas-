@@ -3,7 +3,7 @@ import { TenantUser } from '../models/Auth/Tenent/Tuser.model.js';
 import { TenantSession } from '../models/Auth/Tenent/Tsession.model.js';
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import { asyncHandler } from "../utils/asynchandler.js";
 
 /**
  * Middleware to authenticate tenant users
