@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
 import { User } from "../models/Auth/console/user.model.js";
 import { ConsoleSession } from "../models/Auth/console/consoleSession.js";

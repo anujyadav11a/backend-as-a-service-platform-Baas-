@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
 import { TenantUser } from "../models/Auth/Tenent/Tuser.model.js";
 import { TenantSession } from "../models/Auth/Tenent/Tsession.model.js";
