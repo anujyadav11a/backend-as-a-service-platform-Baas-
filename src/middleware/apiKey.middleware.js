@@ -1,10 +1,12 @@
 import { Project } from '../models/Database/project.model.js';
-import { ApiError } from '../utils/apierror.js';
+import { ApiError } from '../utils/apierror.js  ';
 import { logger } from '../utils/Logger.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
+import { asyncHandler } from "../utils/asynchandler.js";
+import { checkRateLimit, RATE_LIMIT_CONFIGS } from './ratelimiter.middlleware.js';
 
 /**
  * Middleware to authenticate API key for BaaS API access
+ * Includes per-project rate limiting
  */
 export const apiKeyAuth = asyncHandler(async (req, res, next) => {
     try {
@@ -49,7 +51,37 @@ export const apiKeyAuth = asyncHandler(async (req, res, next) => {
             throw ApiError.unauthorized('Invalid API key');
         }
 
-       
+        // Check rate limit for this project
+        const projectId = project._id || project.id;
+        const identifier = `project:${projectId}`;
+        const config = project.rate_limit_config || RATE_LIMIT_CONFIGS.project;
+        
+        const rateLimitResult = await checkRateLimit(identifier, config);
+
+        // Set rate limit headers
+        res.setHeader('X-RateLimit-Limit', rateLimitResult.limit);
+        res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining);
+        res.setHeader('X-RateLimit-Reset', rateLimitResult.resetTime);
+
+        if (!rateLimitResult.allowed) {
+            logger.warn('Rate limit exceeded for project', {
+                projectId,
+                currentCount: rateLimitResult.currentCount,
+                limit: rateLimitResult.limit
+            });
+
+            return res.status(429).json({
+                success: false,
+                message: 'Rate limit exceeded. Too many requests.',
+                error: {
+                    code: 'RATE_LIMIT_EXCEEDED',
+                    limit: rateLimitResult.limit,
+                    remaining: 0,
+                    resetTime: rateLimitResult.resetTime,
+                    retryAfter: rateLimitResult.resetTime - Math.floor(Date.now() / 1000)
+                }
+            });
+        }
 
         // Update usage statistics
         await project.updateUsageStats('api_request');
@@ -63,7 +95,11 @@ export const apiKeyAuth = asyncHandler(async (req, res, next) => {
             projectId: project._id,
             keyId: validatedKey.key_id,
             environment: validatedKey.environment,
-            ip: req.ip
+            ip: req.ip,
+            rateLimit: {
+                remaining: rateLimitResult.remaining,
+                limit: rateLimitResult.limit
+            }
         });
 
         next();
