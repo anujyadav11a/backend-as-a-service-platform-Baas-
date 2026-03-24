@@ -8,6 +8,7 @@ import{
     getCurrentTenantUser
 } from "../controllers/tenant.controller.js"
 import { tenantAuthMiddleware } from '../middleware/tenantAuth.middleware.js'
+import { cacheMiddleware } from '../middleware/redisCache.js'
 
 const tenantUserroute = new Router()
 
@@ -19,6 +20,6 @@ tenantUserroute.route("/tenantlogin").post(tenantLogin)
 tenantUserroute.route("/tenantlogout").post(tenantAuthMiddleware, tenantLogout)
 tenantUserroute.route("/getTenantsessions").get(tenantAuthMiddleware, getTenantSessions)
 tenantUserroute.route("/revokeSession/:sessionId").delete(tenantAuthMiddleware, revokeTenantSession)
-tenantUserroute.route("/getCurrentUser").get(tenantAuthMiddleware, getCurrentTenantUser)
+tenantUserroute.route("/getCurrentUser").get(tenantAuthMiddleware,cacheMiddleware("currentUser",), getCurrentTenantUser)
 
 export default tenantUserroute
