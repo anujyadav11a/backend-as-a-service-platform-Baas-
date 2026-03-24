@@ -6,22 +6,66 @@ import { logger } from "../../utils/Logger.js";
 import { mysqlPool } from "../../db/db.js";
 
 /**
+ * Helper function to extract project ID from either API key or session context
+ * Supports both session-based (console users) and API key-based (tenant apps) authentication
+ */
+function getProjectIdFromContext(req) {
+    // Priority 1: API key authentication (req.project set by apiKeyAuth middleware)
+    if (req.project && req.project._id) {
+        return req.project._id || req.project.id;
+    }
+    
+    // Priority 2: Session-based authentication (project_id in headers)
+    if (req.headers.project_id) {
+        return req.headers.project_id;
+    }
+    
+    // Priority 3: Project ID in body (for backward compatibility)
+    if (req.body?.project_id) {
+        return req.body.project_id;
+    }
+    
+    throw ApiError.badRequest('Project ID is required. Send via X-API-Key header or project_id header/body.');
+}
+
+/**
+ * Helper function to extract collection ID from either params or body
+ */
+function getCollectionIdFromContext(req) {
+    // Priority 1: Collection ID in route params
+    if (req.params.collection_id) {
+        return req.params.collection_id;
+    }
+    
+    // Priority 2: Collection ID in body (for backward compatibility)
+    if (req.body?.collection_id) {
+        return req.body.collection_id;
+    }
+    
+    throw ApiError.badRequest('Collection ID is required.');
+}
+
+/**
  * Add a new document to a collection
  * This function allows tenant users to store data based on the schema they defined in the attributes table
+ * Supports both session-based (console users) and API key-based (tenant apps) authentication
  */
 const addDocument = asyncHandler(async (req, res) => {
-    const { collection_id, data } = req.body;
-    const { project_id } = req.headers;
+    const { data } = req.body;
+    
+    // Support both authentication contexts
+    const collection_id = getCollectionIdFromContext(req);
+    const project_id = getProjectIdFromContext(req);
 
     logger.info('Adding new document to collection', { 
         collection_id, 
         project_id,
-        dataKeys: data ? Object.keys(data) : []
+        dataKeys: data ? Object.keys(data) : [],
+        authType: req.apiKey ? 'API_KEY' : 'SESSION'
     });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['collection_id', 'data'], req.body);
-    ValidationHelper.validateRequired(['project_id'], req.headers);
+    ValidationHelper.validateRequired(['data'], req.body);
 
     // Validate that data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -30,7 +74,7 @@ const addDocument = asyncHandler(async (req, res) => {
 
     // Sanitize inputs
     const sanitizedCollectionId = ValidationHelper.sanitizeInput(collection_id.trim());
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.toString().trim());
 
     try {
         // Step 1: Get all attributes for this collection to validate the data
@@ -111,25 +155,26 @@ const addDocument = asyncHandler(async (req, res) => {
 
 /**
  * Get all documents from a collection
+ * Supports both session-based and API key-based authentication
  */
 const getDocuments = asyncHandler(async (req, res) => {
-    const { collection_id } = req.params;
-    const { project_id } = req.headers;
     const { page = 1, limit = 10 } = req.query;
+    
+    // Support both authentication contexts
+    const collection_id = getCollectionIdFromContext(req);
+    const project_id = getProjectIdFromContext(req);
 
     logger.info('Retrieving documents from collection', { 
         collection_id, 
         project_id,
         page,
-        limit
+        limit,
+        authType: req.apiKey ? 'API_KEY' : 'SESSION'
     });
-
-    // Validate required fields
-    ValidationHelper.validateRequired(['project_id'], req.headers);
 
     // Sanitize inputs
     const sanitizedCollectionId = ValidationHelper.sanitizeInput(collection_id.trim());
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.toString().trim());
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
     const offset = (pageNumber - 1) * limitNumber;
@@ -196,22 +241,25 @@ const getDocuments = asyncHandler(async (req, res) => {
 
 /**
  * Get a single document by ID
+ * Supports both session-based and API key-based authentication
  */
 const getDocumentById = asyncHandler(async (req, res) => {
     const { document_id } = req.params;
-    const { project_id } = req.headers;
+    
+    // Support both authentication contexts
+    const collection_id = getCollectionIdFromContext(req);
+    const project_id = getProjectIdFromContext(req);
 
     logger.info('Retrieving document by ID', { 
         document_id, 
-        project_id
+        collection_id,
+        project_id,
+        authType: req.apiKey ? 'API_KEY' : 'SESSION'
     });
-
-    // Validate required fields
-    ValidationHelper.validateRequired(['project_id'], req.headers);
 
     // Sanitize inputs
     const sanitizedDocumentId = ValidationHelper.sanitizeInput(document_id.trim());
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.toString().trim());
 
     try {
         // Get the document
@@ -262,21 +310,26 @@ const getDocumentById = asyncHandler(async (req, res) => {
 
 /**
  * Update a document by ID
+ * Supports both session-based and API key-based authentication
  */
 const updateDocument = asyncHandler(async (req, res) => {
     const { document_id } = req.params;
     const { data } = req.body;
-    const { project_id } = req.headers;
+    
+    // Support both authentication contexts
+    const collection_id = getCollectionIdFromContext(req);
+    const project_id = getProjectIdFromContext(req);
 
     logger.info('Updating document', { 
         document_id, 
+        collection_id,
         project_id,
-        dataKeys: data ? Object.keys(data) : []
+        dataKeys: data ? Object.keys(data) : [],
+        authType: req.apiKey ? 'API_KEY' : 'SESSION'
     });
 
     // Validate required fields
     ValidationHelper.validateRequired(['data'], req.body);
-    ValidationHelper.validateRequired(['project_id'], req.headers);
 
     // Validate that data is an object
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
@@ -285,7 +338,7 @@ const updateDocument = asyncHandler(async (req, res) => {
 
     // Sanitize inputs
     const sanitizedDocumentId = ValidationHelper.sanitizeInput(document_id.trim());
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.toString().trim());
 
     try {
         // Step 1: Check if document exists and get its collection_id
@@ -370,22 +423,25 @@ const updateDocument = asyncHandler(async (req, res) => {
 
 /**
  * Delete a document by ID
+ * Supports both session-based and API key-based authentication
  */
 const deleteDocument = asyncHandler(async (req, res) => {
     const { document_id } = req.params;
-    const { project_id } = req.headers;
+    
+    // Support both authentication contexts
+    const collection_id = getCollectionIdFromContext(req);
+    const project_id = getProjectIdFromContext(req);
 
     logger.info('Deleting document', { 
         document_id, 
-        project_id
+        collection_id,
+        project_id,
+        authType: req.apiKey ? 'API_KEY' : 'SESSION'
     });
-
-    // Validate required fields
-    ValidationHelper.validateRequired(['project_id'], req.headers);
 
     // Sanitize inputs
     const sanitizedDocumentId = ValidationHelper.sanitizeInput(document_id.trim());
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.toString().trim());
 
     try {
         // Delete the document
