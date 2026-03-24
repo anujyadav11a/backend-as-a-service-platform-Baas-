@@ -86,7 +86,9 @@ export class GoogleOAuthController {
             hasError: !!error,
             ip: req.ip 
         });
-
+       
+        
+        
         // Check for OAuth errors
         if (error) {
             logger.error('OAuth authorization failed', { error });
