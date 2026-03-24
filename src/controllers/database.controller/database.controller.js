@@ -10,14 +10,14 @@ import { mysqlPool } from "../../db/db.js";
  */
 const createDatabase = asyncHandler(async (req, res) => {
     const { name,  } = req.body;
-    const {project_id}= req.session.project_id;
+    const {project_id}= req.params || req.session.project_id;
     const userId = req.user?.id;
 
     logger.info('Creating new database', { userId, name, project_id });
 
     // Validate required fields
     ValidationHelper.validateRequired(['name'], req.body);
-    ValidationHelper.validateRequired(['project_id'], req.session.project_id);
+    ValidationHelper.validateRequired(['project_id'], req.params || req.session.project_id);
     ValidationHelper.validateStringLength(name, 'name', 1, 255);
     ValidationHelper.validateStringLength(project_id, 'project_id', 1, 255);
 
@@ -150,13 +150,13 @@ const deleteDatabase = asyncHandler(async (req, res) => {
  * List all databases for a specific project
  */
 const listAllDatabases = asyncHandler(async (req, res) => {
-    const projectId = req.session.project_id;
+    const projectId = req.params || req.session.project_id;
     const userId = req.user?.id;
 
     logger.info('Listing all databases for project', { projectId, userId });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['project_id'], req.session.project_id);
+    ValidationHelper.validateRequired(['project_id'], req.params ||req.session.project_id);
 
     // Sanitize inputs
     const sanitizedProjectId = ValidationHelper.sanitizeInput(projectId);
