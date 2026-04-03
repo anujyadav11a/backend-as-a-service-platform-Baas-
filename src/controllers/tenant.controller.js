@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
 import { TenantUser } from "../models/Auth/Tenent/Tuser.model.js";
 import { TenantSession } from "../models/Auth/Tenent/Tsession.model.js";
@@ -95,6 +95,7 @@ const tenantRegister = asyncHandler(async (req, res) => {
     // Also try reading uppercase versions as fallback
     const projectId = project_id || req.headers['PROJECT_ID'] || req.headers['project-id'] || req.headers['x-frontier-project-id'];
     const apiKey = api_key || req.headers['API_KEY'] || req.headers['api-key'] || req.headers['x-frontier-api-key'];
+   
 
     // Validate required fields
     ValidationHelper.validateRequired(['username', 'email', 'password'], req.body);
@@ -279,6 +280,10 @@ const tenantLogin = asyncHandler(async (req, res) => {
             ...cookieOptions,
             maxAge: 24 * 60 * 60 * 1000 // 1 day
         })
+        .cookie("sessionId",session._id.toString(),{
+            ...cookieOptions,
+            maxAge:24 * 60 * 60 * 1000 // 1 day
+        })
         .json(response);
 });
 
@@ -287,7 +292,7 @@ const tenantLogin = asyncHandler(async (req, res) => {
  */
 const tenantLogout = asyncHandler(async (req, res) => {
     const refreshToken = req.cookies?.tenantRefreshToken;
-    const userId = req.user?.id; // Assuming you have tenant auth middleware that sets req.user
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
 
     logger.info('Tenant user logout attempt', { userId, hasRefreshToken: !!refreshToken });
 
@@ -295,6 +300,7 @@ const tenantLogout = asyncHandler(async (req, res) => {
         // Find and invalidate the session
         const session = await TenantSession.findOne({ 
             refresh_token: refreshToken, 
+            user_id: userId,
             status: 'active' 
         });
 
@@ -325,20 +331,28 @@ const tenantLogout = asyncHandler(async (req, res) => {
         .status(response.statuscode)
         .clearCookie("tenantRefreshToken", cookieOptions)
         .clearCookie("tenantAccessToken", cookieOptions)
+        .clearCookie("sessionId", cookieOptions)
         .json(response);
 });
+
+
 
 /**
  * Get tenant user's active sessions
  */
 const getTenantSessions = asyncHandler(async (req, res) => {
-    const userId = req.user?.id; // From tenant auth middleware
+    const userId = req.user?.id || req.user?._id;
+    const projectId = req.user?.project_id;
 
     if (!userId) {
         throw ApiError.unauthorized("Authentication required");
     }
 
-    const sessions = await TenantSession.findActiveSessions(userId);
+    // Find all active sessions for this user
+    const sessions = await TenantSession.find({
+        user_id: userId,
+        status: 'active'
+    }).sort({ login_time: -1 });
 
     const sessionData = sessions.map(session => ({
         id: session._id,
@@ -347,12 +361,12 @@ const getTenantSessions = asyncHandler(async (req, res) => {
         login_time: session.login_time,
         last_activity: session.last_activity,
         expires_at: session.expires_at,
-        is_current: req.cookies?.tenantRefreshToken === session.refresh_token
+        is_current: req.cookies?.sessionId === session._id.toString()
     }));
 
     logger.info('Retrieved tenant user sessions', { 
         userId, 
-        projectId: req.user?.project_id,
+        projectId,
         sessionCount: sessions.length 
     });
 
@@ -365,7 +379,7 @@ const getTenantSessions = asyncHandler(async (req, res) => {
  */
 const revokeTenantSession = asyncHandler(async (req, res) => {
     const { sessionId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
 
     ValidationHelper.validateObjectId(sessionId, 'Session ID');
 
@@ -392,11 +406,41 @@ const revokeTenantSession = asyncHandler(async (req, res) => {
     const response = new ApiResponse(200, null, "Session revoked successfully");
     return res.status(response.statuscode).json(response);
 });
+/**
+ * Get current tenant user profile
+ */
+const getCurrentTenantUser = asyncHandler(async (req, res) => {
+    const userId = req.user?.id || req.user?._id; // Fixed user ID access
+    const projectId = req.user?.project_id;
+   
+
+    if (!userId) {
+        throw ApiError.unauthorized("Authentication required");
+    }
+
+    // Get user data without sensitive fields
+    const user = await TenantUser.findById(userId).select("-password");
+
+    if (!user) {
+        logger.error('Current tenant user not found', { userId, projectId });
+        throw ApiError.notFound("User not found");
+    }
+
+    logger.info('Retrieved current tenant user', {
+        userId,
+        projectId,
+        email: user.email
+    });
+
+    const response = new ApiResponse(200, user, "Current user retrieved successfully");
+    return res.status(response.statuscode).json(response);
+});
 
 export {
     tenantRegister,
     tenantLogin,
     tenantLogout,
     getTenantSessions,
-    revokeTenantSession
+    revokeTenantSession,
+    getCurrentTenantUser
 };

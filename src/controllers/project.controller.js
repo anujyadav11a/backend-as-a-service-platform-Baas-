@@ -41,12 +41,15 @@ const createProject = asyncHandler(async (req, res) => {
 
     await project.save();
 
+    //set teh projectid in the session for future API calls
+    req.session.projectId = project._id;
+
     logger.info('Project created successfully', { 
         projectId: project._id, 
         project_id: project.project_id,
         userId 
     });
-
+      
     const response = new ApiResponse(
         201,
         {

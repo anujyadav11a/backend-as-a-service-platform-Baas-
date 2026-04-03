@@ -1,14 +1,17 @@
 import jwt from 'jsonwebtoken';
-import { User } from '../models/Auth/console/user.model.js';
-import { ConsoleSession } from '../models/Auth/console/consoleSession.js';
-import { ApiError } from '../utils/apierror.js  ';
+import { TenantUser } from '../models/Auth/Tenent/Tuser.model.js';
+import { TenantSession } from '../models/Auth/Tenent/Tsession.model.js';
+import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
 
-export const authMiddleware = asyncHandler(async (req, res, next) => {
+/**
+ * Middleware to authenticate tenant users
+ */
+export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
     try {
         // Get token from cookies or Authorization header
-        const token = req.cookies?.accessToken || 
+        const token = req.cookies?.tenantAccessToken || 
                      req.header("Authorization")?.replace("Bearer ", "");
 
         if (!token) {
@@ -18,32 +21,33 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
         // Verify JWT token
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
         
-        // Find user
-        const user = await User.findById(decodedToken._id).select("-password -refreshtoken");
+        // Find tenant user
+        const user = await TenantUser.findById(decodedToken._id).select("-password");
         if (!user) {
-            logger.warn('Token valid but user not found', { userId: decodedToken._id });
+            logger.warn('Token valid but tenant user not found', { userId: decodedToken._id });
             throw ApiError.unauthorized("Invalid access token");
         }
 
-        // Optional: Verify session is still active
-        const sessionToken = req.cookies?.sessionId;
-        if (sessionToken) {
-            const session = await ConsoleSession.findOne({
-                session_token: sessionToken,
+        // Verify session is still active
+        const sessionId = req.cookies?.sessionId;
+        if (sessionId) {
+            const session = await TenantSession.findOne({
+                _id: sessionId,
                 user_id: user._id,
-                is_active: true
+                status: 'active'
             });
 
             if (!session || session.isExpired()) {
-                logger.warn('Session expired or invalid', { 
+                logger.warn('Tenant session expired or invalid', { 
                     userId: user._id, 
-                    sessionToken: sessionToken?.substring(0, 8) + '...' 
+                    sessionId: sessionId?.substring(0, 8) + '...' 
                 });
                 throw ApiError.unauthorized("Session expired");
             }
 
             // Update last activity
-            await session.updateActivity();
+            session.last_activity = new Date();
+            await session.save();
             req.session = session;
         }
 
@@ -53,12 +57,12 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
 
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
-            logger.warn('Invalid JWT token', { error: error.message });
+            logger.warn('Invalid JWT token for tenant', { error: error.message });
             throw ApiError.unauthorized("Invalid access token");
         }
         
         if (error.name === 'TokenExpiredError') {
-            logger.warn('JWT token expired', { error: error.message });
+            logger.warn('JWT token expired for tenant', { error: error.message });
             throw ApiError.unauthorized("Access token expired");
         }
 
@@ -66,40 +70,16 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
             throw error;
         }
 
-        logger.error('Authentication middleware error', { error: error.message });
+        logger.error('Tenant authentication middleware error', { error: error.message });
         throw ApiError.internal("Authentication failed");
     }
 });
 
 /**
- * Optional middleware to check if user has specific role
+ * Middleware to refresh tenant token if it's about to expire
  */
-export const requireRole = (roles) => {
-    return asyncHandler(async (req, res, next) => {
-        if (!req.user) {
-            throw ApiError.unauthorized("Authentication required");
-        }
-
-        const userRoles = Array.isArray(roles) ? roles : [roles];
-        
-        if (!userRoles.includes(req.user.role)) {
-            logger.warn('Insufficient permissions', { 
-                userId: req.user._id, 
-                userRole: req.user.role, 
-                requiredRoles: userRoles 
-            });
-            throw ApiError.forbidden("Insufficient permissions");
-        }
-
-        next();
-    });
-};
-
-/**
- * Middleware to refresh token if it's about to expire
- */
-export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
-    const refreshToken = req.cookies?.refreshToken;
+export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) => {
+    const refreshToken = req.cookies?.tenantRefreshToken;
     
     if (!refreshToken) {
         return next();
@@ -107,11 +87,11 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
 
     try {
         const decodedRefreshToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
-        const user = await User.findById(decodedRefreshToken._id);
+        const user = await TenantUser.findById(decodedRefreshToken._id);
 
-        if (user && user.refreshtoken === refreshToken) {
+        if (user) {
             // Check if access token is about to expire (within 5 minutes)
-            const accessToken = req.cookies?.accessToken;
+            const accessToken = req.cookies?.tenantAccessToken;
             if (accessToken) {
                 const decodedAccessToken = jwt.decode(accessToken);
                 const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
@@ -120,20 +100,20 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
                     // Generate new access token
                     const newAccessToken = user.generateAccessToken();
                     
-                    res.cookie("accessToken", newAccessToken, {
+                    res.cookie("tenantAccessToken", newAccessToken, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
                         sameSite: 'strict',
                         maxAge: 24 * 60 * 60 * 1000 // 1 day
                     });
 
-                    logger.info('Access token refreshed', { userId: user._id });
+                    logger.info('Tenant access token refreshed', { userId: user._id });
                 }
             }
         }
     } catch (error) {
         // If refresh token is invalid, just continue
-        logger.debug('Refresh token validation failed', { error: error.message });
+        logger.debug('Tenant refresh token validation failed', { error: error.message });
     }
 
     next();

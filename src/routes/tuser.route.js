@@ -4,14 +4,22 @@ import{
     tenantLogin,
     tenantLogout,
     getTenantSessions,
-    revokeTenantSession
+    revokeTenantSession,
+    getCurrentTenantUser
 } from "../controllers/tenant.controller.js"
+import { tenantAuthMiddleware } from '../middleware/tenantAuth.middleware.js'
+import { cacheMiddleware } from '../middleware/redisCache.js'
 
-const tenantUserroute =new Router()
+const tenantUserroute = new Router()
 
+// Public routes (no authentication required)
 tenantUserroute.route("/tenantRegister").post(tenantRegister)
-tenantUserroute.route("/tenatlogin").post(tenantLogin)
-tenantUserroute.route("/tenatlogout").post(tenantLogout)
+tenantUserroute.route("/tenantlogin").post(tenantLogin)
 
+// Protected routes (authentication required)
+tenantUserroute.route("/tenantlogout").post(tenantAuthMiddleware, tenantLogout)
+tenantUserroute.route("/getTenantsessions").get(tenantAuthMiddleware, getTenantSessions)
+tenantUserroute.route("/revokeSession/:sessionId").delete(tenantAuthMiddleware, revokeTenantSession)
+tenantUserroute.route("/getCurrentUser").get(tenantAuthMiddleware,cacheMiddleware("currentUser",), getCurrentTenantUser)
 
-export  default tenantUserroute
+export default tenantUserroute
