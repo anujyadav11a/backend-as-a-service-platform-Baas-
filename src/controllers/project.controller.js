@@ -298,11 +298,58 @@ const getProjectForSDK = asyncHandler(async (req, res) => {
     res.status(response.statuscode).json(response);
 });
 
+/**
+ * Delete project (soft delete)
+ */
+const deleteProject = asyncHandler(async (req, res) => {
+    const { projectId } = req.params;
+    const userId = req.user.id;
+
+    logger.info('Deleting project', { projectId, userId });
+
+    const project = await Project.findOne({
+        $or: [
+            { _id: projectId },
+            { project_id: projectId }
+        ],
+        owner_id: userId,
+        status: { $ne: 'deleted' }
+    });
+
+    if (!project) {
+        throw ApiError.notFound('Project not found');
+    }
+
+    // Soft delete - set status to deleted
+    project.status = 'deleted';
+    await project.save();
+
+    // Clear project from session if it matches
+    if (req.session.projectId === project._id.toString()) {
+        delete req.session.projectId;
+    }
+
+    logger.info('Project deleted successfully', { projectId: project._id, userId });
+
+    const response = new ApiResponse(
+        200,
+        {
+            id: project._id,
+            project_id: project.project_id,
+            name: project.name
+        },
+        'Project deleted successfully'
+    );
+
+    res.status(response.statuscode).json(response);
+});
+
 export {
     createProject,
     getUserProjects,
     getProject,
     generateApiKey,
     updateProject,
-    getProjectForSDK
+    getProjectForSDK,
+    deleteProject
 };
