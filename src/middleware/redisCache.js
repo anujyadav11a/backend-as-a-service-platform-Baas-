@@ -9,12 +9,12 @@ import { redis } from "../config/redis.config.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
-export const cacheMiddleware = asyncHandler(async (req, res, next) => {
+export const cacheMiddleware = (prefix) => asyncHandler(async (req, res, next) => {
     let key;
 
-    if (req.user ) {
+    if (req.user) {
       // 🔐 Auth-based key
-      key = `${prefix}${req.user.id}`;
+      key = `${prefix}:${req.user.id}`;
     } else if (req.params.id) {
       // 📦 Resource-based key
       key = `${prefix}:${req.params.id}`;
@@ -26,26 +26,45 @@ export const cacheMiddleware = asyncHandler(async (req, res, next) => {
       key = `${prefix}:${req.originalUrl}`;
     }
 
-    const cacheData = await redis.get(key);
+    try {
+        const cacheData = await redis.get(key);
 
-    if (cacheData) {
-        const responseData = JSON.parse(cacheData);
-        return res
-            .status(200)
-            .json(new ApiResponse(200, responseData, "Data from cache"));
+        if (cacheData) {
+            const responseData = JSON.parse(cacheData);
+            return res
+                .status(200)
+                .json(new ApiResponse(200, responseData, "Data from cache"));
+        }
+
+        console.log("Data not found in cache, proceeding to controller");
+
+        // override response method
+        res.sendResponse = async (data) => {
+            try {
+                await redis.set(key, JSON.stringify(data), "EX", 3600);
+                return res
+                    .status(200)
+                    .json(new ApiResponse(200, data, "Data from controller"));
+            } catch (error) {
+                console.error("Redis set error:", error);
+                // If Redis fails, still send response
+                return res
+                    .status(200)
+                    .json(new ApiResponse(200, data, "Data from controller"));
+            }
+        };
+
+        next();
+    } catch (error) {
+        console.error("Redis get error:", error);
+        // If Redis fails, skip cache and proceed to controller
+        res.sendResponse = async (data) => {
+            return res
+                .status(200)
+                .json(new ApiResponse(200, data, "Data from controller"));
+        };
+        next();
     }
-
-    console.log("Data not found in cache, proceeding to controller");
-
-    // override response method
-    res.sendResponse = async (data) => {
-        await redis.set(key, JSON.stringify(data), "EX", 3600);
-        return res
-            .status(200)
-            .json(new ApiResponse(200, data, "Data from controller"));
-    };
-
-    next();
 });
 
 
