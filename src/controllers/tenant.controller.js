@@ -284,7 +284,7 @@ const tenantLogin = asyncHandler(async (req, res) => {
             ...cookieOptions,
             maxAge:24 * 60 * 60 * 1000 // 1 day
         })
-        .sendResponse(response);
+        .json(response);
 });
 
 /**
