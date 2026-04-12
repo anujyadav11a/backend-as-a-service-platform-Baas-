@@ -32,32 +32,26 @@ export const cacheMiddleware = (prefix) => asyncHandler(async (req, res, next) =
         if (cacheData) {
             const responseData = JSON.parse(cacheData);
             return res
-                .status(200)
-                .json(new ApiResponse(200, responseData, "Data from cache"));
+                .status(responseData.statuscode)
+                .json(responseData);
         }
 
         console.log("Data not found in cache, proceeding to controller");
 
-        // override response method
-        res.sendResponse = async (data) => {
-            try {
-                await redis.set(key, JSON.stringify(data), "EX", 3600);
-                return res
-                    .status(200)
-                    .json(new ApiResponse(200, data, "Data from controller"));
-            } catch (error) {
-                console.error("Redis set error:", error);
-                // If Redis fails, still send response
-                return res
-                    .status(200)
-                    .json(new ApiResponse(200, data, "Data from controller"));
-            }
-        };
+        const originalJson = res.json.bind(res);
 
-        next();
-    } catch (error) {
+        res.json = (data) => {
+              redis.set(key, JSON.stringify(data), "EX", 3600)
+              .then(() => console.log("Cached"))
+              .catch(err => console.error("Redis error:", err));
+
+              return originalJson(data);
+          };
+
+            next();
+           } catch (error) {
         console.error("Redis get error:", error);
-        // If Redis fails, skip cache and proceed to controller
+        //  Redis fails, skip cache and proceed to controller
         res.sendResponse = async (data) => {
             return res
                 .status(200)
