@@ -88,6 +88,11 @@ const projectSchema = new Schema({
 // Indexes for performance
 projectSchema.index({ owner_id: 1, status: 1 });
 projectSchema.index({ createdAt: -1 });
+// Unique name per owner (case-insensitive)
+projectSchema.index({ owner_id: 1, name: 1 }, { 
+    unique: true, 
+    partialFilterExpression: { status: { $ne: 'deleted' } }
+});
 
 
 // Virtual for SDK config info
@@ -141,6 +146,22 @@ projectSchema.statics.findByApiKey = function(api_Key) {
 
 projectSchema.statics.findByOwner = function(owner_Id) {
     return this.find({ owner_id: owner_Id, status: { $ne: 'deleted' } }).lean();
+};
+
+projectSchema.statics.searchByName = function(owner_Id, searchQuery) {
+    return this.find({ 
+        owner_id: owner_Id, 
+        status: { $ne: 'deleted' },
+        name: { $regex: searchQuery, $options: 'i' }
+    }).lean();
+};
+
+projectSchema.statics.findByName = function(owner_Id, projectName) {
+    return this.findOne({ 
+        owner_id: owner_Id, 
+        name: projectName,
+        status: { $ne: 'deleted' }
+    }).lean();
 };
 
 // Pre-save middleware
