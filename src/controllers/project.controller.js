@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/apiresponse.js";
 import { ValidationHelper } from "../utils/validate.js";
 import { logger } from "../utils/Logger.js";
 import { Project } from "../models/Database/project.model.js";
+import { invalidateCache, CacheKeys } from "../utils/cacheInvalidation.js";
 
 /**
  * Create a new project
@@ -26,6 +27,12 @@ const createProject = asyncHandler(async (req, res) => {
     const sanitizedName = ValidationHelper.sanitizeInput(name);
     const sanitizedDescription = description ? ValidationHelper.sanitizeInput(description) : '';
 
+    // Check for duplicate project name for this user
+    const existingProject = await Project.findByName(userId, sanitizedName);
+    if (existingProject) {
+        throw ApiError.conflict('A project with this name already exists');
+    }
+
     // Check project limit (max 5 projects per user for now)
     const userProjects = await Project.findByOwner(userId);
     if (userProjects.length >= 5) {
@@ -43,6 +50,11 @@ const createProject = asyncHandler(async (req, res) => {
 
     //set teh projectid in the session for future API calls
     req.session.projectId = project._id;
+
+    // Invalidate project list cache for this user
+    await invalidateCache([
+        CacheKeys.projectList(userId)
+    ]);
 
     logger.info('Project created successfully', { 
         projectId: project._id, 
@@ -177,7 +189,16 @@ const updateProject = asyncHandler(async (req, res) => {
     // Validate and update fields
     if (name) {
         ValidationHelper.validateStringLength(name, 'name', 2, 100);
-        project.name = ValidationHelper.sanitizeInput(name);
+        const sanitizedName = ValidationHelper.sanitizeInput(name);
+        
+        // Check if name is being changed and if new name already exists
+        if (sanitizedName !== project.name) {
+            const existingProject = await Project.findByName(userId, sanitizedName);
+            if (existingProject) {
+                throw ApiError.conflict('A project with this name already exists');
+            }
+            project.name = sanitizedName;
+        }
     }
 
     if (description !== undefined) {
@@ -190,6 +211,13 @@ const updateProject = asyncHandler(async (req, res) => {
     }
 
     await project.save();
+
+    // Invalidate related caches
+    await invalidateCache([
+        CacheKeys.projectList(userId),
+        CacheKeys.project(projectId),
+        CacheKeys.sdkDetails(userId)
+    ]);
 
     logger.info('Project updated successfully', { projectId: project._id, userId });
 
@@ -209,9 +237,6 @@ const updateProject = asyncHandler(async (req, res) => {
 
     res.status(response.statuscode).json(response);
 });
-
-
-
 
 /**
  * Generate API key for project
@@ -258,10 +283,6 @@ const generateApiKey = asyncHandler(async (req, res) => {
     res.status(response.statuscode).json(response);
 });
 
-
-
-
-
 /**
  * Get project details for SDK configuration
  */
@@ -299,6 +320,47 @@ const getProjectForSDK = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Search projects by name
+ */
+const searchProjects = asyncHandler(async (req, res) => {
+    const { query } = req.query;
+    const userId = req.user.id;
+
+    logger.info('Searching projects', { userId, query });
+
+    if (!query || query.trim().length === 0) {
+        throw ApiError.badRequest('Search query is required');
+    }
+
+    const sanitizedQuery = ValidationHelper.sanitizeInput(query.trim());
+    
+    const projects = await Project.searchByName(userId, sanitizedQuery);
+
+    logger.info('Projects search completed', { userId, resultsCount: projects.length });
+
+    const response = new ApiResponse(
+        200,
+        {
+            query: sanitizedQuery,
+            count: projects.length,
+            projects: projects.map(project => ({
+                id: project._id,
+                project_id: project.project_id,
+                name: project.name,
+                description: project.description,
+                api_key: project.api_key,
+                status: project.status,
+                created_at: project.createdAt,
+                updated_at: project.updatedAt
+            }))
+        },
+        'Projects search completed'
+    );
+
+    res.status(response.statuscode).json(response);
+});
+
+/**
  * Delete project (soft delete)
  */
 const deleteProject = asyncHandler(async (req, res) => {
@@ -329,6 +391,14 @@ const deleteProject = asyncHandler(async (req, res) => {
         delete req.session.projectId;
     }
 
+    // Invalidate all related caches
+    await invalidateCache([
+        CacheKeys.projectList(userId),
+        CacheKeys.project(projectId),
+        CacheKeys.sdkDetails(userId),
+        CacheKeys.databaseList(project.project_id)
+    ]);
+
     logger.info('Project deleted successfully', { projectId: project._id, userId });
 
     const response = new ApiResponse(
@@ -351,5 +421,6 @@ export {
     generateApiKey,
     updateProject,
     getProjectForSDK,
+    searchProjects,
     deleteProject
 };
