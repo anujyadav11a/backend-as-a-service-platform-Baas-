@@ -4,6 +4,7 @@ import { ApiResponse } from "../../utils/apiresponse.js";
 import { ValidationHelper } from "../../utils/validate.js";
 import { logger } from "../../utils/Logger.js";
 import { mysqlPool } from "../../db/db.js";
+import { invalidateCache, CacheKeys } from "../../utils/cacheInvalidation.js";
 
 /**
  * Create a new database
@@ -46,6 +47,11 @@ const createDatabase = asyncHandler(async (req, res) => {
 
         // Store database ID in session for next API calls
         req.session.databaseId = createdDatabase.id;
+
+        // Invalidate database list cache for this project
+        await invalidateCache([
+            CacheKeys.databaseList(sanitizedProjectId)
+        ]);
 
         logger.info('Database created successfully', { 
             databaseId: createdDatabase.id,
@@ -111,6 +117,11 @@ const deleteDatabase = asyncHandler(async (req, res) => {
         // Delete the database record
         const deleteQuery = 'DELETE FROM databasess WHERE id = ?';
         const [result] = await mysqlPool.promise().execute(deleteQuery, [sanitizedId]);
+
+        // Invalidate database list cache for this project
+        await invalidateCache([
+            CacheKeys.databaseList(database.project_id)
+        ]);
 
         logger.info('Database deleted successfully', { 
             databaseId: database.id,
