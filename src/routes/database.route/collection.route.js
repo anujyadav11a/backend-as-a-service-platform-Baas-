@@ -6,6 +6,7 @@ import { addColumn } from "../../controllers/database.controller/attribute.contr
 import {
     addDocument,
     getDocuments,
+    queryDocuments,
     getDocumentById,
     updateDocument,
     deleteDocument
@@ -23,6 +24,9 @@ collectionRouter.route("/:collection_id/documents").post(apiKeyAuth, addDocument
 
 // Get all documents from a collection with pagination
 collectionRouter.route("/:collection_id/documents").get(apiKeyAuth, getDocuments);
+
+// Query documents with filters (server-side filtering)
+collectionRouter.route("/:collection_id/documents/query").post(apiKeyAuth, queryDocuments);
 
 // Get a single document by ID
 collectionRouter.route("/:collection_id/documents/:document_id").get(apiKeyAuth, getDocumentById);
