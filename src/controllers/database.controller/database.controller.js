@@ -5,6 +5,7 @@ import { ValidationHelper } from "../../utils/validate.js";
 import { logger } from "../../utils/Logger.js";
 import { mysqlPool } from "../../db/db.js";
 import { invalidateCache, CacheKeys } from "../../utils/cacheInvalidation.js";
+import { Project } from "../../models/Database/project.model.js";
 
 /**
  * Create a new database
@@ -28,6 +29,27 @@ const createDatabase = asyncHandler(async (req, res) => {
 
     
     try {
+        // Verify project exists AND belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Database creation attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
+        logger.info('Project ownership verified', {
+            userId,
+            project_id: sanitizedProjectId,
+            projectName: project.name
+        });
+
         // Check if database with same name and project_id already exists
         const checkQuery = 'SELECT id FROM databasess WHERE name = ? AND project_id = ?';
         const [existingRows] = await mysqlPool.promise().execute(checkQuery, [sanitizedName, sanitizedProjectId]);
@@ -114,6 +136,28 @@ const deleteDatabase = asyncHandler(async (req, res) => {
 
         const database = existingRows[0];
 
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: database.project_id,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Database deletion attempted for unauthorized project', {
+                userId,
+                project_id: database.project_id,
+                databaseId: sanitizedId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
+        logger.info('Project ownership verified for database deletion', {
+            userId,
+            project_id: database.project_id,
+            databaseId: sanitizedId
+        });
+
         // Delete the database record
         const deleteQuery = 'DELETE FROM databasess WHERE id = ?';
         const [result] = await mysqlPool.promise().execute(deleteQuery, [sanitizedId]);
@@ -161,24 +205,45 @@ const deleteDatabase = asyncHandler(async (req, res) => {
  * List all databases for a specific project
  */
 const listAllDatabases = asyncHandler(async (req, res) => {
-    const projectId = req.params || req.session.project_id;
+    const {project_id} = req.params;
     const userId = req.user?.id;
 
-    logger.info('Listing all databases for project', { projectId, userId });
+    logger.info('Listing all databases for project', { project_id, userId });
 
     // Validate required fields
-    ValidationHelper.validateRequired(['project_id'], req.params ||req.session.project_id);
+    ValidationHelper.validateRequired(['project_id'], req.params);
 
     // Sanitize inputs
-    const sanitizedProjectId = ValidationHelper.sanitizeInput(projectId);
+    const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id);
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Database list attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
+        logger.info('Project ownership verified for database listing', {
+            userId,
+            project_id: sanitizedProjectId,
+            projectName: project.name
+        });
+
         // Query all databases for the project
         const selectQuery = 'SELECT id, name, project_id, created_at, updated_at FROM databasess WHERE project_id = ? ORDER BY created_at DESC';
         const [databases] = await mysqlPool.promise().execute(selectQuery, [sanitizedProjectId]);
 
         logger.info('Databases retrieved successfully', { 
-            projectId: sanitizedProjectId,
+            project_id: sanitizedProjectId,
             totalCount: databases.length,
             userId 
         });
@@ -204,7 +269,7 @@ const listAllDatabases = asyncHandler(async (req, res) => {
     } catch (error) {
         logger.error('Error listing databases', { 
             error: error.message, 
-            projectId: sanitizedProjectId,
+            project_id: sanitizedProjectId,
             userId 
         });
         

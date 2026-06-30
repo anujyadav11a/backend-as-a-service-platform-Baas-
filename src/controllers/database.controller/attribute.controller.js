@@ -4,6 +4,7 @@ import { ApiResponse } from "../../utils/apiresponse.js";
 import { ValidationHelper } from "../../utils/validate.js";
 import { logger } from "../../utils/Logger.js";
 import { mysqlPool } from "../../db/db.js";
+import { Project } from "../../models/Database/project.model.js";
 
 /**
  * Add a new column (attribute) to a collection
@@ -114,6 +115,22 @@ const addColumn = asyncHandler(async (req, res) => {
     }
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const userId = req.user?.id;
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Attribute creation attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
         // Insert new attribute directly
         const [result] = await mysqlPool.promise().execute(
             'INSERT INTO attributes (collection_id, database_id, name, type, required, project_id) VALUES (?, ?, ?, ?, ?, ?)',
@@ -191,6 +208,22 @@ const listAttributes = asyncHandler(async (req, res) => {
     const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id.trim());
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const userId = req.user?.id;
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Attribute listing attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
         // Fetch all attributes for the collection with verification
         const [attributes] = await mysqlPool.promise().execute(
             `SELECT id, collection_id, database_id, name, type, required, project_id, created_at, updated_at 
@@ -260,6 +293,22 @@ const updateAttribute = asyncHandler(async (req, res) => {
     }
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const userId = req.user?.id;
+        const project = await Project.findOne({
+            project_id: project_id,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Attribute update attempted for unauthorized project', {
+                userId,
+                project_id
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
         // First, fetch the existing attribute to verify it exists and belongs to the project
         const [existingAttr] = await mysqlPool.promise().execute(
             'SELECT * FROM attributes WHERE id = ? AND project_id = ?',
@@ -414,6 +463,22 @@ const deleteAttribute = asyncHandler(async (req, res) => {
     }
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const userId = req.user?.id;
+        const project = await Project.findOne({
+            project_id: project_id,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Attribute deletion attempted for unauthorized project', {
+                userId,
+                project_id
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
         // Fetch the attribute to verify it exists and belongs to the project
         const [attributes] = await mysqlPool.promise().execute(
             'SELECT * FROM attributes WHERE id = ? AND project_id = ?',
