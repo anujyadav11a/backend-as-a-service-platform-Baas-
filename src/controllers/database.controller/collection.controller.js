@@ -5,6 +5,7 @@ import { ValidationHelper } from "../../utils/validate.js";
 import { logger } from "../../utils/Logger.js";
 import { mysqlPool } from "../../db/db.js";
 import { v4 as uuidv4 } from 'uuid';
+import { Project } from "../../models/Database/project.model.js";
 
 /**
  * Create a new collection
@@ -35,9 +36,24 @@ const createCollection = asyncHandler(async (req, res) => {
     const sanitizedDatabaseId = parseInt(database_id);
 
     try {
-        // Check if database exists
-        const checkDatabaseQuery = 'SELECT id FROM databasess WHERE id = ?';
-        const [databaseRows] = await mysqlPool.promise().execute(checkDatabaseQuery, [sanitizedDatabaseId]);
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Collection creation attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
+        // Check if database exists and belongs to the project
+        const checkDatabaseQuery = 'SELECT id FROM databasess WHERE id = ? AND project_id = ?';
+        const [databaseRows] = await mysqlPool.promise().execute(checkDatabaseQuery, [sanitizedDatabaseId, sanitizedProjectId]);
 
         if (databaseRows.length === 0) {
             throw ApiError.notFound('Database not found');
@@ -127,6 +143,21 @@ const deleteCollection = asyncHandler(async (req, res) => {
     const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id);
 
     try {
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Collection deletion attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
         // Check if collection exists
         const checkQuery = 'SELECT id, name, database_id, project_id FROM collections WHERE id = ? AND database_id = ? AND project_id = ?';
         const [existingRows] = await mysqlPool.promise().execute(checkQuery, [sanitizedCollectionId, sanitizedDatabaseId, sanitizedProjectId]);
@@ -205,7 +236,22 @@ const listAllCollections = asyncHandler(async (req, res) => {
     const sanitizedProjectId = ValidationHelper.sanitizeInput(project_id);
 
     try {
-        // Check if database exists
+        // Verify project belongs to authenticated user (SECURITY CHECK)
+        const project = await Project.findOne({
+            project_id: sanitizedProjectId,
+            owner_id: userId,
+            status: 'active'
+        });
+
+        if (!project) {
+            logger.warn('Collection listing attempted for unauthorized project', {
+                userId,
+                project_id: sanitizedProjectId
+            });
+            throw ApiError.forbidden('Project not found or access denied');
+        }
+
+        // Check if database exists and belongs to project
         const checkDatabaseQuery = 'SELECT id FROM databasess WHERE id = ? AND project_id = ?';
         const [databaseRows] = await mysqlPool.promise().execute(checkDatabaseQuery, [sanitizedDatabaseId, sanitizedProjectId]);
 
