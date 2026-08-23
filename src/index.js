@@ -1,4 +1,5 @@
 import { ConnectDb, Connectmysql } from "./db/db.js";
+import { validateEncryptionConfig } from "./utils/cryptoUtils.js";
 
 import dotenv from 'dotenv';
 import app from './app.js';
@@ -6,6 +7,9 @@ import app from './app.js';
 dotenv.config({
     path: "./.env"
 })
+
+// Validate encryption configuration early
+validateEncryptionConfig();
 
 const Port = process.env.PORT || 20000;
 
