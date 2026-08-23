@@ -1,0 +1,217 @@
+import { User } from '../models/User.js';
+import { ConsoleSession } from '../models/ConsoleSession.js';
+import { ApiError } from '../../../shared/utils/apierror.js';
+import { logger } from '../../../shared/utils/Logger.js';
+import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
+import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
+import crypto from 'crypto';
+
+const generateAccessAndRefreshToken = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            logger.error('User not found during token generation', { userId });
+            throw ApiError.notFound("User not found");
+        }
+        
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+        
+        user.refreshtoken = refreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        logger.info('Tokens generated successfully', { userId });
+        return { accessToken, refreshToken };
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        logger.error('Token generation failed', { userId, error: error.message });
+        throw ApiError.internal("Failed to generate authentication tokens");
+    }
+};
+
+const createUserSession = async (user, req, sessionToken, refreshToken) => {
+    try {
+        const userAgent = req.headers['user-agent'] || 'Unknown';
+        const deviceInfo = parseUserAgent(userAgent);
+        
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
+        
+        const session = new ConsoleSession({
+            user_id: user._id,
+            session_token: sessionToken,
+            refresh_token: refreshToken,
+            ip_address: ipAddress,
+            user_agent: userAgent,
+            device_info: deviceInfo,
+            location: await getLocationFromIP(ipAddress),
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            login_method: 'email_password',
+            is_active: true
+        });
+
+        const savedSession = await session.save();
+        
+        logger.info('User session created', {
+            userId: user._id,
+            sessionId: savedSession._id,
+            ipAddress,
+            deviceType: deviceInfo.device_type
+        });
+
+        return savedSession;
+    } catch (error) {
+        logger.error('Failed to create user session', {
+            userId: user._id,
+            error: error.message
+        });
+        throw ApiError.internal("Failed to create user session");
+    }
+};
+
+export class AuthService {
+    static async register({ name, email, password }) {
+        logger.info('User registration attempt', { email });
+
+        const sanitizedName = name.trim();
+        const sanitizedEmail = email.toLowerCase().trim();
+
+        const userExist = await User.findOne({ email: sanitizedEmail });
+        if (userExist) {
+            logger.warn('Registration attempt with existing email', { email: sanitizedEmail });
+            throw ApiError.conflict("User already exists with this email");
+        }
+
+        const user = await User.create({
+            name: sanitizedName,
+            email: sanitizedEmail,
+            password
+        });
+
+        const createdUser = await User.findById(user._id).select("-password -refreshtoken");
+
+        if (!createdUser) {
+            logger.error('User creation failed', { email: sanitizedEmail });
+            throw ApiError.internal("User registration failed, please try again");
+        }
+
+        logger.info('User registered successfully', { 
+            userId: createdUser._id, 
+            email: sanitizedEmail 
+        });
+
+        return createdUser;
+    }
+
+    static async login({ email, password, req }) {
+        logger.info('User login attempt', { 
+            email, 
+            ip: req.ip, 
+            userAgent: req.headers['user-agent'] 
+        });
+
+        const sanitizedEmail = email.toLowerCase().trim();
+
+        const user = await User.findOne({ email: sanitizedEmail });
+        if (!user) {
+            logger.warn('Login attempt with non-existent email', { email: sanitizedEmail });
+            throw ApiError.unauthorized("Invalid email or password");
+        }
+
+        const isPasswordValid = await user.comparePassword(password);
+        if (!isPasswordValid) {
+            logger.warn('Login attempt with invalid password', { 
+                userId: user._id, 
+                email: sanitizedEmail 
+            });
+            throw ApiError.unauthorized("Invalid email or password");
+        }
+
+        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+        const session = await createUserSession(user, req, sessionToken, refreshToken);
+
+        const loggedInUser = await User.findById(user._id).select("-password -refreshtoken");
+
+        const tokens = {
+            accessToken,
+            refreshToken,
+            sessionToken
+        };
+
+        return {
+            user: loggedInUser,
+            session: {
+                id: session._id,
+                expires_at: session.expires_at,
+                device_info: session.device_info,
+                location: session.location
+            },
+            tokens: {
+                accessToken
+            },
+            cookies: setAuthCookies(null, tokens, 'console')
+        };
+    }
+
+    static async logout({ sessionToken, userId }) {
+        logger.info('User logout attempt', { userId, hasSessionToken: !!sessionToken });
+
+        if (sessionToken) {
+            const session = await ConsoleSession.findOne({ 
+                session_token: sessionToken, 
+                is_active: true 
+            });
+
+            if (session) {
+                await session.invalidate();
+                logger.info('Session invalidated on logout', { 
+                    sessionId: session._id, 
+                    userId: session.user_id 
+                });
+            }
+        }
+
+        if (userId) {
+            await User.findByIdAndUpdate(userId, { refreshtoken: null });
+        }
+
+        logger.info('User logged out successfully', { userId });
+
+        return clearAuthCookies(null, 'console');
+    }
+
+    static async getSessions(userId) {
+        const sessions = await ConsoleSession.findActiveSessions(userId);
+
+        return sessions.map(session => ({
+            id: session._id,
+            ip_address: session.ip_address,
+            device_info: session.device_info,
+            location: session.location,
+            login_method: session.login_method,
+            last_activity: session.last_activity,
+            created_at: session.createdAt,
+        }));
+    }
+
+    static async revokeSession(sessionId, userId) {
+        const session = await ConsoleSession.findOne({
+            _id: sessionId,
+            user_id: userId,
+            is_active: true
+        });
+
+        if (!session) {
+            throw ApiError.notFound("Session not found");
+        }
+
+        await session.invalidate();
+
+        logger.info('Session revoked', { sessionId, userId });
+
+        return { success: true };
+    }
+}
