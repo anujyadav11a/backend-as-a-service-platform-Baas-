@@ -75,15 +75,8 @@ const checkRateLimit = async (identifier, config) => {
             error: error.message
         });
         
-        // Fail open - allow request if Redis is down
-        return {
-            allowed: true,
-            limit: maxRequests,
-            remaining: maxRequests,
-            resetTime: Math.ceil((now + (windowSize * 1000)) / 1000),
-            currentCount: 0,
-            error: true
-        };
+        // Fail closed - deny request if Redis is down
+        throw new ApiError(503, 'Rate limiter unavailable', 'RATE_LIMITER_UNAVAILABLE');
     }
 };
 
@@ -141,8 +134,7 @@ export const projectRateLimiter = async (req, res, next) => {
             error: error.message,
             stack: error.stack
         });
-        // Fail open - allow request on error
-        next();
+        next(error);
     }
 };
 
@@ -185,8 +177,7 @@ export const ipRateLimiter = async (req, res, next) => {
             error: error.message,
             stack: error.stack
         });
-        // Fail open - allow request on error
-        next();
+        next(error);
     }
 };
 
@@ -230,8 +221,7 @@ export const strictRateLimiter = async (req, res, next) => {
             error: error.message,
             stack: error.stack
         });
-        // Fail open - allow request on error
-        next();
+        next(error);
     }
 };
 
@@ -280,8 +270,7 @@ export const customRateLimiter = (config, identifierFn) => {
                 error: error.message,
                 stack: error.stack
             });
-            // Fail open - allow request on error
-            next();
+            next(error);
         }
     };
 };
