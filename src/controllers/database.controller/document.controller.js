@@ -96,13 +96,10 @@ const addDocument = asyncHandler(async (req, res) => {
         // Step 3: Generate a unique document ID
         const documentId = generateDocumentId();
 
-        // Step 4: Get the first attribute ID (required for the foreign key constraint)
-        const firstAttributeId = attributeRows[0].id;
-
-        // Step 5: Insert the document into the database
+        // Step 4: Insert the document into the database
         const [result] = await mysqlPool.promise().execute(
-            'INSERT INTO documents (id, collection_id, data, project_id, attribute_id) VALUES (?, ?, ?, ?, ?)',
-            [documentId, sanitizedCollectionId, JSON.stringify(data), sanitizedProjectId, firstAttributeId]
+            'INSERT INTO documents (id, collection_id, data, project_id) VALUES (?, ?, ?, ?)',
+            [documentId, sanitizedCollectionId, JSON.stringify(data), sanitizedProjectId]
         );
 
         // Step 6: Retrieve the created document
