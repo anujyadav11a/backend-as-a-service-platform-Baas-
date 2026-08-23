@@ -1,7 +1,4 @@
--- ============================================================================
--- MySQL Schema for Backend Database System
--- Database: backend (as per .env MYSQL_DATABASE)
--- ============================================================================
+
 
 -- 1. Databases Table
 -- Stores database definitions within projects
@@ -56,11 +53,9 @@ CREATE TABLE IF NOT EXISTS documents (
     collection_id VARCHAR(36) NOT NULL,
     data JSON NOT NULL,  -- Stores the actual document data
     project_id VARCHAR(255) NOT NULL,
-    attribute_id INT NOT NULL,  -- Reference to first attribute (for FK constraint)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
-    FOREIGN KEY (attribute_id) REFERENCES attributes(id) ON DELETE CASCADE,
     INDEX idx_collection_id (collection_id),
     INDEX idx_project_id (project_id),
     INDEX idx_created_at (created_at)
@@ -77,6 +72,4 @@ CREATE TABLE IF NOT EXISTS rate_limits (
     INDEX idx_window_start (window_start)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================================================
--- End of Schema
--- ============================================================================
+
