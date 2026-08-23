@@ -6,14 +6,16 @@ import {
     getUserSessions, 
     revokeSession 
 } from '../controllers/User.controller.js';
-import { authMiddleware } from '../middleware/auth.middleware.js'; // You'll need to create this
+import { authMiddleware } from '../middleware/auth.middleware.js';
+import { validate } from '../middleware/validate.js';
+import { registerSchema, loginSchema, logoutSchema } from '../validation/auth.js';
 
 const userrouter = express.Router();
 
 // Public routes
-userrouter.route('/register').post(userRegister);
-userrouter.route('/login').post(userLogin);
+userrouter.route('/register').post(validate(registerSchema), userRegister);
+userrouter.route('/login').post(validate(loginSchema), userLogin);
 
 // Protected routes (require authentication)
-userrouter.route('/logout').post(authMiddleware, userLogout);
+userrouter.route('/logout').post(authMiddleware, validate(logoutSchema), userLogout);
 export default userrouter;
