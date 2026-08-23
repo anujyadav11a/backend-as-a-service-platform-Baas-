@@ -2,16 +2,13 @@
 // In production, use Redis or a proper session store
 
 const sessions = new Map();
+import { sessionCookieOptions } from '../utils/cookieUtils.js';
 
 export const sessionMiddleware = (req, res, next) => {
     const sessionId = req.cookies.sessionId || generateSessionId();
     
     if (!req.cookies.sessionId) {
-        res.cookie('sessionId', sessionId, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        });
+        res.cookie('sessionId', sessionId, sessionCookieOptions);
     }
     
     // Get or create session
