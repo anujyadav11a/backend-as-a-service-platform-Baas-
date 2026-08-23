@@ -13,7 +13,9 @@ export { AuthController } from './controllers/AuthController.js';
 export { TenantAuthController } from './controllers/TenantAuthController.js';
 export { OAuthController } from './controllers/OAuthController.js';
 
-export { default as authRoutes } from './routes/auth.routes.js';
+export { default as userRoutes } from './routes/user.routes.js';
+export { default as tenantRoutes } from './routes/tenant.routes.js';
+export { default as googleOAuthRoutes } from './routes/googleOAuth.routes.js';
 
 export { 
     authEventBus,
