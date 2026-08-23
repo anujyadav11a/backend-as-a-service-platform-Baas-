@@ -8,6 +8,7 @@ import tenantUserroute from './routes/tuser.route.js';
 import databaseRouter from './routes/database.route/database.route.js';
 import collectionRouter from './routes/database.route/collection.route.js';
 import attributeRouter from './routes/database.route/attribute.route.js';
+import healthRoutes from './routes/health.routes.js';
 
 import { logger } from './utils/Logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
@@ -36,6 +37,7 @@ app.use(refreshTokenMiddleware)
 app.use(tenantRefreshTokenMiddleware)
 
 // Routes
+app.use('/', healthRoutes);
 app.use('/auth', googleOAuthRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/projects', projectRoutes);
