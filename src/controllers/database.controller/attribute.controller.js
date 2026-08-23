@@ -322,6 +322,8 @@ const updateAttribute = asyncHandler(async (req, res) => {
         const attribute = existingAttr[0];
         const updates = {};
         const values = [];
+        // Allow-list of valid column names that can be updated
+        const allowedUpdateFields = ['name', 'type', 'required'];
 
         // Validate and prepare name update
         if (name) {
@@ -386,8 +388,16 @@ const updateAttribute = asyncHandler(async (req, res) => {
             values.push(required ? 1 : 0);
         }
 
-        // Build the UPDATE query dynamically
-        const updateFields = Object.keys(updates).map(field => `${field} = ?`).join(', ');
+        // Build the UPDATE query using allow-listed field names only
+        const updateFields = Object.keys(updates)
+            .filter(field => allowedUpdateFields.includes(field))
+            .map(field => `\`${field}\` = ?`)
+            .join(', ');
+        
+        if (!updateFields) {
+            throw ApiError.badRequest('No valid fields to update');
+        }
+        
         values.push(attribute_id, project_id);
 
         await mysqlPool.promise().execute(
@@ -503,20 +513,9 @@ const deleteAttribute = asyncHandler(async (req, res) => {
             );
         }
 
-        // Check how many documents depend on this attribute
-        const [documentCount] = await mysqlPool.promise().execute(
-            'SELECT COUNT(*) as count FROM documents WHERE attribute_id = ?',
-            [attribute_id]
-        );
-
-        const docsAffected = documentCount[0].count;
-
-        if (docsAffected > 0) {
-            logger.warn('Deleting attribute with dependent documents', { 
-                attribute_id,
-                documents_affected: docsAffected
-            });
-        }
+        // Note: attribute_id column was removed from documents table in migration (Task 1.4)
+        // Documents store data as JSON, so no direct FK dependency exists
+        const docsAffected = 0;
 
         // Delete the attribute (use transaction for safety)
         const connection = await mysqlPool.getConnection();
