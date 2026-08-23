@@ -4,6 +4,7 @@ import { ConsoleSession } from '../models/Auth/console/consoleSession.js';
 import { ApiError } from '../utils/apierror.js  ';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
+import { accessTokenCookieOptions } from '../utils/cookieUtils.js';
 
 export const authMiddleware = asyncHandler(async (req, res, next) => {
     try {
@@ -120,12 +121,7 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
                     // Generate new access token
                     const newAccessToken = user.generateAccessToken();
                     
-                    res.cookie("accessToken", newAccessToken, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: 'strict',
-                        maxAge: 24 * 60 * 60 * 1000 // 1 day
-                    });
+                    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
 
                     logger.info('Access token refreshed', { userId: user._id });
                 }

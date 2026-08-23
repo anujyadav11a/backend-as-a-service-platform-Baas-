@@ -4,6 +4,7 @@ import { TenantSession } from '../models/Auth/Tenent/Tsession.model.js';
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
+import { accessTokenCookieOptions } from '../utils/cookieUtils.js';
 
 /**
  * Middleware to authenticate tenant users
@@ -100,12 +101,7 @@ export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) 
                     // Generate new access token
                     const newAccessToken = user.generateAccessToken();
                     
-                    res.cookie("tenantAccessToken", newAccessToken, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: 'strict',
-                        maxAge: 24 * 60 * 60 * 1000 // 1 day
-                    });
+                    res.cookie("tenantAccessToken", newAccessToken, accessTokenCookieOptions);
 
                     logger.info('Tenant access token refreshed', { userId: user._id });
                 }

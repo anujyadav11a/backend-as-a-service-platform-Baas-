@@ -6,7 +6,8 @@ import { Project } from "../models/Database/project.model.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { ValidationHelper } from "../utils/validate.js";
 import { logger } from "../utils/Logger.js";
-import { parseUserAgent,getLocationFromIP } from "./User.controller.js";
+import { parseUserAgent, getLocationFromIP } from "./User.controller.js";
+import { setAuthCookies, clearAuthCookies } from "../utils/cookieUtils.js";
 
 
 /**
@@ -270,21 +271,15 @@ const tenantLogin = asyncHandler(async (req, res) => {
         "User logged in successfully"
     );
 
+    const tokens = {
+        accessToken,
+        refreshToken,
+        sessionToken: session._id.toString()
+    };
+
     return res
         .status(response.statuscode)
-        .cookie("tenantRefreshToken", refreshToken, {
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        })
-        .cookie("tenantAccessToken", accessToken, {
-            ...cookieOptions,
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
-        })
-        .cookie("sessionId",session._id.toString(),{
-            ...cookieOptions,
-            maxAge:24 * 60 * 60 * 1000 // 1 day
-        })
-        .json(response);
+        .json(setAuthCookies(res, tokens, 'tenant'));
 });
 
 /**
@@ -317,22 +312,13 @@ const tenantLogout = asyncHandler(async (req, res) => {
         }
     }
 
-    const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    };
-
     logger.info('Tenant user logged out successfully', { userId });
 
     const response = new ApiResponse(200, null, "User logged out successfully");
 
     return res
         .status(response.statuscode)
-        .clearCookie("tenantRefreshToken", cookieOptions)
-        .clearCookie("tenantAccessToken", cookieOptions)
-        .clearCookie("sessionId", cookieOptions)
-        .json(response);
+        .json(clearAuthCookies(res, 'tenant'));
 });
 
 

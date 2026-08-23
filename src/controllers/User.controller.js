@@ -6,6 +6,7 @@ import { ApiResponse } from "../utils/apiresponse.js";
 import { ValidationHelper } from "../utils/validate.js";
 import { logger } from "../utils/Logger.js";
 import crypto from "crypto";
+import { setAuthCookies, clearAuthCookies } from "../utils/cookieUtils.js";
 
 /**
  * Parse user agent for device information
@@ -255,21 +256,15 @@ const userLogin = asyncHandler(async (req, res) => {
         "User logged in successfully"
     );
 
+    const tokens = {
+        accessToken,
+        refreshToken,
+        sessionToken
+    };
+
     return res
         .status(response.statuscode)
-        .cookie("refreshToken", refreshToken, {
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        })
-        .cookie("accessToken", accessToken, {
-            ...cookieOptions,
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
-        })
-        .cookie("sessionId", sessionToken, {
-            ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        })
-        .json(response);
+        .json(setAuthCookies(res, tokens, 'console'));
 });
 
 /**
@@ -302,22 +297,13 @@ const userLogout = asyncHandler(async (req, res) => {
         await User.findByIdAndUpdate(userId, { refreshtoken: null });
     }
 
-    const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    };
-
     logger.info('User logged out successfully', { userId });
 
     const response = new ApiResponse(200, null, "User logged out successfully");
 
     return res
         .status(response.statuscode)
-        .clearCookie("refreshToken", cookieOptions)
-        .clearCookie("accessToken", cookieOptions)
-        .clearCookie("sessionId", cookieOptions)
-        .json(response);
+        .json(clearAuthCookies(res, 'console'));
 });
 
 /**
