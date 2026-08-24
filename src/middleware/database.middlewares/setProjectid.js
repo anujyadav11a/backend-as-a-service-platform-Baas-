@@ -1,4 +1,4 @@
-import { Project } from "../../models/Database/project.model.js";
+import { Project } from "../../../modules/project/models/Project.js";
 import { ApiError } from "../../utils/apierror.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { logger } from "../../utils/Logger.js";
