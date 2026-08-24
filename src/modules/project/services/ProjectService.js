@@ -2,6 +2,8 @@ import { Project } from '../models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
+import { eventBus } from '../../../shared/events/EventBus.js';
+import { ProjectEvents } from '../../../shared/events/projectEvents.js';
 
 export class ProjectService {
     static async create({ name, description, ownerId }) {
@@ -32,6 +34,14 @@ export class ProjectService {
             projectId: project._id, 
             project_id: project.project_id,
             ownerId 
+        });
+
+        // Emit domain event
+        eventBus.emit(ProjectEvents.PROJECT_CREATED, {
+            projectId: project._id,
+            project_id: project.project_id,
+            name: project.name,
+            ownerId
         });
 
         return project;
@@ -134,6 +144,16 @@ export class ProjectService {
 
         logger.info('Project updated successfully', { projectId: project._id, ownerId });
 
+        // Emit domain event
+        const changedFields = {};
+        if (name !== undefined) changedFields.name = name;
+        if (description !== undefined) changedFields.description = description;
+        eventBus.emit(ProjectEvents.PROJECT_UPDATED, {
+            projectId: project._id,
+            project_id: project.project_id,
+            changedFields
+        });
+
         return {
             id: project._id,
             project_id: project.project_id,
@@ -173,6 +193,13 @@ export class ProjectService {
         ]);
 
         logger.info('Project deleted successfully', { projectId: project._id, ownerId });
+
+        // Emit domain event
+        eventBus.emit(ProjectEvents.PROJECT_DELETED, {
+            projectId: project._id,
+            project_id: project.project_id,
+            ownerId
+        });
 
         return {
             id: project._id,
