@@ -31,10 +31,19 @@ const userSchema = new Schema({
 userSchema.pre("save", async function () {
     if (!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10);
+    
+    if (this.isModified("refreshtoken") && this.refreshtoken) {
+        this.refreshtoken = await bcrypt.hash(this.refreshtoken, 10);
+    }
 });
 
 userSchema.methods.comparePassword = async function (password) {
     return await bcrypt.compare(password, this.password);
+};
+
+userSchema.methods.compareRefreshToken = async function (refreshToken) {
+    if (!this.refreshtoken) return false;
+    return await bcrypt.compare(refreshToken, this.refreshtoken);
 };
 
 userSchema.methods.generateAccessToken = function () {
