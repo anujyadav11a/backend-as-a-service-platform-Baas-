@@ -60,16 +60,16 @@ tenantUserSchema.virtual('full_name').get(function() {
 });
 
 // Pre-save Middleware - Hash password before saving
-tenantUserSchema.pre('save', async function() {
+tenantUserSchema.pre('save', async function(next) {
     // Only hash password if it's modified (new or changed)
-    if (!this.isModified('password')) return ;
+    if (!this.isModified('password')) return next();
     
     try {
         // Hash password with salt rounds of 10
         this.password = await bcrypt.hash(this.password, 10);
         next();
     } catch (error) {
-       
+        next(error);
     }
 });
 
