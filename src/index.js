@@ -1,8 +1,11 @@
-import { ConnectDb, Connectmysql } from "./db/db.js";
-import { validateEncryptionConfig } from "./utils/cryptoUtils.js";
+import { ConnectDb, Connectmysql } from "./shared/config/db.js";
+import { validateEncryptionConfig } from "./shared/utils/cryptoUtils.js";
 
 import dotenv from 'dotenv';
 import app from './app.js';
+import { initAuthListeners } from './modules/auth/listeners/index.js';
+import { initProjectListeners } from './modules/project/listeners/index.js';
+import { initBaaSListeners } from './modules/baas/listeners/index.js';
 
 dotenv.config({
     path: "./.env"
@@ -21,6 +24,11 @@ ConnectDb()
     })
     .then(() => {
         console.log("MySQL connected successfully");
+        // Initialize domain event listeners
+        initAuthListeners();
+        initProjectListeners();
+        initBaaSListeners();
+
         app.listen(Port, () => {
             console.log(`Server is running at port ${Port}`);
         });
