@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcrypt";
 
 const sessionSchema = new Schema({
     user_id: {
@@ -71,6 +72,13 @@ const sessionSchema = new Schema({
 sessionSchema.index({ user_id: 1, is_active: 1 });
 sessionSchema.index({ last_activity: 1 });
 
+// Pre-save hook to hash refresh_token
+sessionSchema.pre("save", async function () {
+    if (this.isModified("refresh_token") && this.refresh_token) {
+        this.refresh_token = await bcrypt.hash(this.refresh_token, 10);
+    }
+});
+
 // Methods
 sessionSchema.methods.isExpired = function() {
     return new Date() > this.expires_at;
@@ -84,6 +92,11 @@ sessionSchema.methods.updateActivity = function() {
 sessionSchema.methods.invalidate = function() {
     this.is_active = false;
     return this.save();
+};
+
+sessionSchema.methods.compareRefreshToken = async function (refreshToken) {
+    if (!this.refresh_token) return false;
+    return await bcrypt.compare(refreshToken, this.refresh_token);
 };
 
 // Static methods
