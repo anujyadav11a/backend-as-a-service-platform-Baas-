@@ -1,13 +1,13 @@
 import { OAuthService } from '../services/OAuthService.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
+import { setOAuthState, consumeOAuthState } from '../../../middleware/googleauthsession.middleware.js';
 
 export class OAuthController {
     static async redirectToGoogle(req, res) {
         const oauthService = new OAuthService();
         const { authUrl, state } = oauthService.generateAuthUrl();
 
-        req.session = req.session || {};
-        req.session.oauthState = state;
+        await setOAuthState(state, { createdAt: Date.now() });
 
         const response = new ApiResponse(
             200,
@@ -20,13 +20,13 @@ export class OAuthController {
 
     static async handleCallback(req, res) {
         const { code, state, error } = req.query;
-        const sessionOauthState = req.session?.oauthState;
+        const sessionOauthState = await consumeOAuthState(state);
 
         const oauthService = new OAuthService();
         const result = await oauthService.handleCallback({ 
             code, 
             state, 
-            sessionOauthState,
+            sessionOauthState: !!sessionOauthState,
             req 
         });
 
