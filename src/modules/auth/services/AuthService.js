@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { ConsoleSession } from '../models/ConsoleSession.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
@@ -30,6 +31,64 @@ const generateAccessAndRefreshToken = async (userId) => {
         }
         logger.error('Token generation failed', { userId, error: error.message });
         throw ApiError.internal("Failed to generate authentication tokens");
+    }
+};
+
+const rotateRefreshToken = async (userId, oldRefreshToken, req) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            logger.error('User not found during token rotation', { userId });
+            throw ApiError.notFound("User not found");
+        }
+
+        // Verify the old refresh token matches
+        const isValid = await user.compareRefreshToken(oldRefreshToken);
+        if (!isValid) {
+            // REUSE DETECTION: Token doesn't match - possible theft
+            logger.warn('Refresh token reuse detected - revoking all sessions', { userId });
+            
+            // Revoke all user sessions
+            await ConsoleSession.invalidateAllUserSessions(userId);
+            await User.findByIdAndUpdate(userId, { refreshtoken: null });
+            
+            // Emit security event
+            eventBus.emit(AuthEvents.REFRESH_TOKEN_REUSE_DETECTED, {
+                userId,
+                ip: req?.ip,
+                userAgent: req?.headers?.['user-agent']
+            });
+            
+            throw ApiError.unauthorized("Token reuse detected. All sessions revoked for security.");
+        }
+
+        // Generate new token pair
+        const accessToken = user.generateAccessToken();
+        const newRefreshToken = user.generateRefreshToken();
+        
+        // Update user with new refresh token
+        user.refreshtoken = newRefreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        // Update session with new refresh token
+        const session = await ConsoleSession.findOne({
+            user_id: userId,
+            is_active: true
+        });
+        
+        if (session) {
+            session.refresh_token = newRefreshToken;
+            await session.save();
+        }
+
+        logger.info('Refresh token rotated successfully', { userId });
+        return { accessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        logger.error('Token rotation failed', { userId, error: error.message });
+        throw ApiError.internal("Failed to rotate authentication tokens");
     }
 };
 
@@ -237,5 +296,36 @@ export class AuthService {
         logger.info('Session revoked', { sessionId, userId });
 
         return { success: true };
+    }
+
+    static async refreshToken(refreshToken, req) {
+        try {
+            const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+            const userId = decoded._id;
+
+            const { accessToken, refreshToken: newRefreshToken } = await rotateRefreshToken(userId, refreshToken, req);
+
+            const tokens = {
+                accessToken,
+                refreshToken: newRefreshToken,
+                sessionToken: req.cookies?.sessionId
+            };
+
+            return {
+                tokens: {
+                    accessToken
+                },
+                cookies: setAuthCookies(null, tokens, 'console')
+            };
+        } catch (error) {
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+                throw ApiError.unauthorized("Invalid or expired refresh token");
+            }
+            logger.error('Token refresh failed', { error: error.message });
+            throw ApiError.internal("Failed to refresh token");
+        }
     }
 }
