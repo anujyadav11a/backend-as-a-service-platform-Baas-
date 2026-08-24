@@ -5,14 +5,14 @@ import googleOAuthRoutes from './modules/auth/routes/googleOAuth.routes.js';
 import userRoutes from './modules/auth/routes/user.routes.js';
 import tenantUserroute from './modules/auth/routes/tenant.routes.js';
 import projectRoutes from './modules/project/routes/project.routes.js';
-import databaseRouter from './routes/database.route/database.route.js';
-import collectionRouter from './routes/database.route/collection.route.js';
-import attributeRouter from './routes/database.route/attribute.route.js';
+import databaseRouter from './modules/baas/routes/database.routes.js';
+import collectionRouter from './modules/baas/routes/collection.routes.js';
+import attributeRouter from './modules/baas/routes/attribute.routes.js';
 import healthRoutes from './routes/health.routes.js';
 
-import { logger } from './utils/Logger.js';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler.middleware.js';
-import { refreshTokenMiddleware } from './middleware/auth.middleware.js';
+import { logger } from './shared/utils/Logger.js';
+import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler.middleware.js';
+import { refreshTokenMiddleware } from './shared/middleware/auth.middleware.js';
 import { tenantRefreshTokenMiddleware } from './middleware/tenantAuth.middleware.js';
 
 const app = express();
