@@ -98,6 +98,7 @@ export const requireRole = (roles) => {
 
 /**
  * Middleware to refresh token if it's about to expire
+ * Also rotates refresh token when used (with reuse detection)
  */
 export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
     const refreshToken = req.cookies?.refreshToken;
@@ -120,12 +121,31 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
                 const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
                 
                 if (timeUntilExpiry < 5 * 60 * 1000) { // Less than 5 minutes
-                    // Generate new access token
+                    // Rotate both tokens (refresh token rotation with reuse detection)
                     const newAccessToken = user.generateAccessToken();
+                    const newRefreshToken = user.generateRefreshToken();
                     
-                    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
+                    user.refreshtoken = newRefreshToken;
+                    await user.save({ validateBeforeSave: false });
 
-                    logger.info('Access token refreshed', { userId: user._id });
+                    // Update session with new refresh token
+                    const session = await ConsoleSession.findOne({
+                        user_id: user._id,
+                        is_active: true
+                    });
+                    
+                    if (session) {
+                        session.refresh_token = newRefreshToken;
+                        await session.save();
+                    }
+
+                    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
+                    res.cookie("refreshToken", newRefreshToken, {
+                        ...accessTokenCookieOptions,
+                        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                    });
+
+                    logger.info('Tokens rotated successfully', { userId: user._id });
                 }
             }
         }
