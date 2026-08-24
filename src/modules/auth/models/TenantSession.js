@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
 
 /**
  * Tenant User Session Model
@@ -140,6 +141,10 @@ tenantSessionSchema.pre('save', async function() {
         this.last_activity = new Date();
     }
    
+    // Hash refresh_token if modified
+    if (this.isModified("refresh_token") && this.refresh_token) {
+        this.refresh_token = await bcrypt.hash(this.refresh_token, 10);
+    }
 });
 
 // Instance Methods
@@ -158,6 +163,16 @@ tenantSessionSchema.methods.isExpired = function() {
 tenantSessionSchema.methods.updateActivity = async function() {
     this.last_activity = new Date();
     return await this.save();
+};
+
+/**
+ * Compare refresh token with hashed value
+ * @param {string} refreshToken - Plain refresh token to compare
+ * @returns {boolean} - True if matches
+ */
+tenantSessionSchema.methods.compareRefreshToken = async function(refreshToken) {
+    if (!this.refresh_token) return false;
+    return await bcrypt.compare(refreshToken, this.refresh_token);
 };
 
 /**
