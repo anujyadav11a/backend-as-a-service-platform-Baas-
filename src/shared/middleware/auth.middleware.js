@@ -110,7 +110,9 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
         const decodedRefreshToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         const user = await User.findById(decodedRefreshToken._id);
 
-        if (user && user.refreshtoken === refreshToken) {
+        const isRefreshTokenValid = user && await user.compareRefreshToken(refreshToken);
+        
+        if (isRefreshTokenValid) {
             // Check if access token is about to expire (within 5 minutes)
             const accessToken = req.cookies?.accessToken;
             if (accessToken) {
