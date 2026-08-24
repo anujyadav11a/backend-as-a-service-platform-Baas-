@@ -68,10 +68,10 @@ export class OAuthService {
             throw ApiError.badRequest('Authorization code is required');
         }
 
-        if (!state || !sessionOauthState || state !== sessionOauthState) {
+        if (!state || !sessionOauthState) {
             logger.error('CSRF validation failed', { 
                 providedState: state, 
-                sessionState: sessionOauthState 
+                hasSessionState: sessionOauthState
             });
             throw ApiError.badRequest('Invalid state parameter - CSRF protection failed');
         }
