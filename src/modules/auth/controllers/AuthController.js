@@ -29,6 +29,29 @@ export class AuthController {
             .json(result.cookies(res, result));
     }
 
+    static async refreshToken(req, res) {
+        const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+        
+        if (!refreshToken) {
+            const response = new ApiResponse(400, null, "Refresh token is required");
+            return res.status(response.statuscode).json(response);
+        }
+
+        const result = await AuthService.refreshToken(refreshToken, req);
+
+        const response = new ApiResponse(
+            200,
+            {
+                tokens: result.tokens
+            },
+            "Token refreshed successfully"
+        );
+
+        return res
+            .status(response.statuscode)
+            .json(result.cookies(res, result));
+    }
+
     static async logout(req, res) {
         const sessionToken = req.cookies?.sessionId;
         const userId = req.user?.id;
