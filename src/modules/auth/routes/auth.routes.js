@@ -12,6 +12,7 @@ const router = express.Router();
 // Console user routes
 router.post('/register', validate(registerSchema), AuthController.register);
 router.post('/login', validate(loginSchema), AuthController.login);
+router.post('/refresh', validate(refreshTokenSchema), AuthController.refreshToken);
 router.post('/logout', authMiddleware, validate(logoutSchema), AuthController.logout);
 router.get('/sessions', authMiddleware, AuthController.getSessions);
 router.delete('/sessions/:sessionId', authMiddleware, validate(revokeSessionSchema), AuthController.revokeSession);
