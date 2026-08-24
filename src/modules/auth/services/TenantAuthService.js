@@ -225,28 +225,36 @@ export class TenantAuthService {
         logger.info('Tenant user logout attempt', { userId, hasRefreshToken: !!refreshToken });
 
         if (refreshToken) {
-            const session = await TenantSession.findOne({ 
-                refresh_token: refreshToken, 
+            const sessions = await TenantSession.find({ 
                 user_id: userId,
                 status: 'active' 
             });
 
-            if (session) {
-                session.status = 'revoked';
-                session.logout_time = new Date();
-                await session.save();
+            let matchedSession = null;
+            for (const session of sessions) {
+                const isMatch = await session.compareRefreshToken(refreshToken);
+                if (isMatch) {
+                    matchedSession = session;
+                    break;
+                }
+            }
+
+            if (matchedSession) {
+                matchedSession.status = 'revoked';
+                matchedSession.logout_time = new Date();
+                await matchedSession.save();
                 
                 logger.info('Tenant session invalidated on logout', { 
-                    sessionId: session._id, 
-                    userId: session.user_id,
-                    projectId: session.project_id
+                    sessionId: matchedSession._id, 
+                    userId: matchedSession.user_id,
+                    projectId: matchedSession.project_id
                 });
 
                 // Emit domain event
                 eventBus.emit(AuthEvents.TENANT_USER_LOGGED_OUT, {
-                    userId: session.user_id,
-                    projectId: session.project_id,
-                    sessionId: session._id
+                    userId: matchedSession.user_id,
+                    projectId: matchedSession.project_id,
+                    sessionId: matchedSession._id
                 });
             }
         }
