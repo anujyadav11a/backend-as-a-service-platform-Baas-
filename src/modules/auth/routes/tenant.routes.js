@@ -1,6 +1,6 @@
 import express from 'express';
 import { TenantAuthController } from '../controllers/TenantAuthController.js';
-import { tenantAuthMiddleware } from '../../../shared/middleware/tenantAuth.middleware.js';
+import { tenantAuthMiddleware } from '../../../middleware/tenantAuth.middleware.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import { tenantRegisterSchema, tenantLoginSchema, revokeSessionSchema } from '../../../shared/validation/auth.js';
 

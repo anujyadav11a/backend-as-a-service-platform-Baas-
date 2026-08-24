@@ -6,6 +6,8 @@ import { logger } from '../../../shared/utils/Logger.js';
 import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
 import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
 import crypto from 'crypto';
+import { eventBus } from '../../../shared/events/EventBus.js';
+import { AuthEvents } from '../../../shared/events/authEvents.js';
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -129,6 +131,14 @@ export class TenantAuthService {
             project_id: projectId
         });
 
+        // Emit domain event
+        eventBus.emit(AuthEvents.TENANT_USER_REGISTERED, {
+            userId: createdUser._id,
+            email: sanitizedEmail,
+            username: sanitizedUsername,
+            projectId
+        });
+
         return createdUser;
     }
 
@@ -187,6 +197,15 @@ export class TenantAuthService {
             sessionToken: session._id.toString()
         };
 
+        // Emit domain event
+        eventBus.emit(AuthEvents.TENANT_USER_LOGGED_IN, {
+            userId: user._id,
+            email: sanitizedEmail,
+            projectId,
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
         return {
             user: loggedInUser,
             session: {
@@ -221,6 +240,13 @@ export class TenantAuthService {
                     sessionId: session._id, 
                     userId: session.user_id,
                     projectId: session.project_id
+                });
+
+                // Emit domain event
+                eventBus.emit(AuthEvents.TENANT_USER_LOGGED_OUT, {
+                    userId: session.user_id,
+                    projectId: session.project_id,
+                    sessionId: session._id
                 });
             }
         }

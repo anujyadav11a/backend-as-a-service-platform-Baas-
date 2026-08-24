@@ -8,6 +8,8 @@ import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { ValidationHelper } from '../../../shared/utils/validate.js';
 import { setAuthCookies } from '../../../shared/utils/cookieUtils.js';
+import { eventBus } from '../../../shared/events/EventBus.js';
+import { AuthEvents } from '../../../shared/events/authEvents.js';
 
 export class OAuthService {
     constructor() {
@@ -77,6 +79,15 @@ export class OAuthService {
         const tokenData = await this.exchangeCodeForTokens(code);
         const userInfo = await this.getUserInfo(tokenData.access_token);
         const result = await this.processOAuthUser(userInfo, tokenData, req);
+
+        // Emit domain event
+        eventBus.emit(AuthEvents.OAUTH_GOOGLE_CALLBACK, {
+            userId: result.user.id,
+            email: result.user.email,
+            googleUserId: result.oauth.provider_id,
+            isNewUser: result.oauth.connected_at ? false : true, // approximate
+            isPrimaryIdentity: result.oauth.is_primary
+        });
 
         logger.info('OAuth authentication successful', { 
             userId: result.user.id, 
@@ -397,6 +408,12 @@ export class OAuthService {
 
             logger.info('Access token refreshed successfully', { identityId });
 
+            // Emit domain event
+            eventBus.emit(AuthEvents.OAUTH_TOKEN_REFRESHED, {
+                identityId,
+                provider: 'google'
+            });
+
             return {
                 access_token: tokenData.access_token,
                 expires_in: tokenData.expires_in,
@@ -446,6 +463,12 @@ export class OAuthService {
 
             await identity.revoke();
             logger.info('OAuth access revoked successfully', { identityId });
+
+            // Emit domain event
+            eventBus.emit(AuthEvents.OAUTH_REVOKED, {
+                identityId,
+                provider: 'google'
+            });
 
             return { success: true };
 

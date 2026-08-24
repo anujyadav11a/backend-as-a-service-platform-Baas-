@@ -5,6 +5,8 @@ import { logger } from '../../../shared/utils/Logger.js';
 import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
 import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
 import crypto from 'crypto';
+import { eventBus } from '../../../shared/events/EventBus.js';
+import { AuthEvents } from '../../../shared/events/authEvents.js';
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -101,6 +103,13 @@ export class AuthService {
             email: sanitizedEmail 
         });
 
+        // Emit domain event
+        eventBus.emit(AuthEvents.USER_REGISTERED, {
+            userId: createdUser._id,
+            email: sanitizedEmail,
+            name: sanitizedName
+        });
+
         return createdUser;
     }
 
@@ -141,6 +150,15 @@ export class AuthService {
             sessionToken
         };
 
+        // Emit domain event
+        eventBus.emit(AuthEvents.USER_LOGGED_IN, {
+            userId: user._id,
+            email: sanitizedEmail,
+            authType: 'console',
+            ip: req.ip,
+            userAgent: req.headers['user-agent']
+        });
+
         return {
             user: loggedInUser,
             session: {
@@ -170,6 +188,12 @@ export class AuthService {
                 logger.info('Session invalidated on logout', { 
                     sessionId: session._id, 
                     userId: session.user_id 
+                });
+
+                // Emit domain event
+                eventBus.emit(AuthEvents.USER_LOGGED_OUT, {
+                    userId: session.user_id,
+                    sessionId: session._id
                 });
             }
         }
