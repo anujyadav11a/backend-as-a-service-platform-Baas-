@@ -5,7 +5,7 @@ import { OAuthController } from '../controllers/OAuthController.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import { authMiddleware } from '../../../shared/middleware/auth.middleware.js';
 import { tenantAuthMiddleware } from '../../../shared/middleware/tenantAuth.middleware.js';
-import { registerSchema, loginSchema, logoutSchema, tenantRegisterSchema, tenantLoginSchema, revokeSessionSchema } from '../../../shared/validation/auth.js';
+import { registerSchema, loginSchema, logoutSchema, tenantRegisterSchema, tenantLoginSchema, revokeSessionSchema, refreshTokenSchema } from '../../../shared/validation/auth.js';
 
 const router = express.Router();
 
