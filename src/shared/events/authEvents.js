@@ -13,4 +13,5 @@ export const AuthEvents = {
   OAUTH_GOOGLE_CALLBACK: 'oauth.google.callback',
   OAUTH_TOKEN_REFRESHED: 'oauth.token.refreshed',
   OAUTH_REVOKED: 'oauth.revoked',
+  REFRESH_TOKEN_REUSE_DETECTED: 'refresh_token.reuse_detected',
 };
