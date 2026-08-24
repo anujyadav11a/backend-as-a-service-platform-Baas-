@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
-import { TenantUser } from '../models/Auth/Tenent/Tuser.model.js';
-import { TenantSession } from '../models/Auth/Tenent/Tsession.model.js';
-import { ApiError } from '../utils/apierror.js';
-import { logger } from '../utils/Logger.js';
-import { asyncHandler } from "../utils/asynchandler.js";
-import { accessTokenCookieOptions } from '../utils/cookieUtils.js';
+import { TenantUser } from '../modules/auth/models/TenantUser.js';
+import { TenantSession } from '../modules/auth/models/TenantSession.js';
+import { ApiError } from '../shared/utils/apierror.js';
+import { logger } from '../shared/utils/Logger.js';
+import { asyncHandler } from '../shared/utils/asynchandler.js';
+import { accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
 
 /**
  * Middleware to authenticate tenant users

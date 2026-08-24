@@ -2,7 +2,7 @@
 // In production, use Redis or a proper session store
 
 const sessions = new Map();
-import { sessionCookieOptions } from '../utils/cookieUtils.js';
+import { sessionCookieOptions } from '../../shared/utils/cookieUtils.js';
 
 export const sessionMiddleware = (req, res, next) => {
     const sessionId = req.cookies.sessionId || generateSessionId();
