@@ -20,15 +20,13 @@ const tenantSessionSchema = new Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'TenantUser',
-        required: true,
-        index: true
+        required: true
     },
     
     // Project Reference (for quick filtering)
     project_id: {
         type: String,
-        required: true,
-        index: true
+        required: true
     },
     
     
@@ -36,8 +34,7 @@ const tenantSessionSchema = new Schema({
     // JWT Token Information
     refresh_token: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
    
     
@@ -86,8 +83,7 @@ const tenantSessionSchema = new Schema({
     status: {
         type: String,
         enum: ['active', 'expired', 'revoked', 'suspicious'],
-        default: 'active',
-        index: true
+        default: 'active'
     },
     
     // Session Timing
@@ -103,8 +99,7 @@ const tenantSessionSchema = new Schema({
     },
     expires_at: {
         type: Date,
-        required: true,
-        index: true  // For cleanup of expired sessions
+        required: true
     },
     logout_time: {
         type: Date  // Set when user logs out
@@ -115,12 +110,9 @@ const tenantSessionSchema = new Schema({
    
     
 }, {
-    timestamps: true
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'production'
 });
-
-// Indexes for performance
-tenantSessionSchema.index({ user_id: 1, is_active: 1 });
-tenantSessionSchema.index({ last_activity: 1 });
 
 // Virtual for session duration
 tenantSessionSchema.virtual('duration_minutes').get(function() {

@@ -21,21 +21,19 @@ const projectSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-        index: true
+       
     },
 
     // Project ID for SDK (unique identifier)
     project_id: {
         type: String,
-        unique: true,
-        index: true
+        
     },
 
     // API Key for authentication
     api_key: {
         type: String,
-        unique: true,
-        index: true
+        
     },
 
     // Project Status
@@ -43,7 +41,7 @@ const projectSchema = new Schema({
         type: String,
         enum: ['active', 'suspended', 'deleted'],
         default: 'active',
-        index: true
+       
     },
 
     // Basic Configuration

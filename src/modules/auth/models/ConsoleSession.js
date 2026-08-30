@@ -5,19 +5,15 @@ const sessionSchema = new Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
-        index: true
+        required: true
     },
     session_token: {
         type: String,
-        required: true,
-        unique: true,
-        index: true
+        required: true
     },
     refresh_token: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     ip_address: {
         type: String,
@@ -51,8 +47,7 @@ const sessionSchema = new Schema({
     },
     expires_at: {
         type: Date,
-        required: true,
-        index: { expireAfterSeconds: 0 }
+        required: true
     },
     login_method: {
         type: String,
@@ -65,12 +60,9 @@ const sessionSchema = new Schema({
         default: new Map()
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'production'
 });
-
-// Indexes for performance
-sessionSchema.index({ user_id: 1, is_active: 1 });
-sessionSchema.index({ last_activity: 1 });
 
 // Pre-save hook to hash refresh_token
 sessionSchema.pre("save", async function () {

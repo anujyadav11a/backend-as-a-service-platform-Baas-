@@ -5,19 +5,16 @@ const identitySchema = new Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
-        index: true
+        required: true
     },
     provider: {
         type: String,
         required: true,
-        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin'],
-        index: true
+        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin']
     },
     provider_id: {
         type: String,
-        required: true,
-        index: true
+        required: true
     },
     provider_email: {
         type: String,
@@ -58,14 +55,8 @@ const identitySchema = new Schema({
         default: {}
     }
 
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: process.env.NODE_ENV !== 'production' });
 
-
-// Compound indexes for performance and uniqueness
-identitySchema.index({ provider: 1, provider_id: 1 }, { unique: true });
-identitySchema.index({ user_id: 1, provider: 1 });
-identitySchema.index({ user_id: 1, is_primary: 1 });
-identitySchema.index({ expires_at: 1 });
 
 // Virtual for checking if refresh token is expired
 identitySchema.virtual('is_token_expired').get(function() {
