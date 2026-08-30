@@ -4,19 +4,16 @@ const tenantIdentitySchema = new Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "TenantUser",
-        required: true,
-        index: true
+        required: true
     },
     provider: {
         type: String,
         required: true,
-        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin'],
-        index: true
+        enum: ['google', 'github', 'microsoft', 'facebook', 'linkedin']
     },
     provider_id: {
         type: String,
-        required: true,
-        index: true
+        required: true
     },
     provider_email: {
         type: String,
@@ -56,14 +53,8 @@ const tenantIdentitySchema = new Schema({
         default: {}
     }
 
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: process.env.NODE_ENV !== 'production' });
 
-
-// Compound indexes for performance and uniqueness
-tenantIdentitySchema.index({ provider: 1, provider_id: 1 }, { unique: true });
-tenantIdentitySchema.index({ user_id: 1, provider: 1 });
-tenantIdentitySchema.index({ user_id: 1, is_primary: 1 });
-tenantIdentitySchema.index({ expires_at: 1 });
 
 // Virtual for checking if refresh token is expired
 tenantIdentitySchema.virtual('is_token_expired').get(function() {

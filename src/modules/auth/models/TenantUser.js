@@ -29,7 +29,7 @@ const tenantUserSchema = new Schema({
     project_id: {
         type: String,
         required: true,
-        index: true  // For fast lookups
+        
     },
     
     
@@ -43,13 +43,11 @@ const tenantUserSchema = new Schema({
     
     
 }, {
-    timestamps: true  // Adds createdAt and updatedAt
+    timestamps: true,
+    autoIndex: process.env.NODE_ENV !== 'production'
 });
 
-// Indexes for Performance
-tenantUserSchema.index({ project_id: 1, email: 1 }, { unique: true }); // Unique email per project
-tenantUserSchema.index({ project_id: 1, username: 1 }, { unique: true }); // Unique username per project
-tenantUserSchema.index({ project_id: 1, status: 1 }); // For filtering active users
+
 
 // Virtual for full name
 tenantUserSchema.virtual('full_name').get(function() {
