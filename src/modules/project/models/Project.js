@@ -49,21 +49,44 @@ const projectSchema = new Schema({
         // Database Configuration
         max_databases: {
             type: Number,
-            default: 3
+            default: 3,
+            min: 1,
+            max: 50,
+            validate: {
+                validator: Number.isInteger,
+                message: 'max_databases must be an integer'
+            }
         },
         max_tables_per_db: {
             type: Number,
-            default: 10
+            default: 10,
+            min: 1,
+            max: 500,
+            validate: {
+                validator: Number.isInteger,
+                message: 'max_tables_per_db must be an integer'
+            }
         },
         max_documents_per_table: {
             type: Number,
-            default: 1000
+            default: 1000,
+            min: 1,
+            max: 100000,
+            validate: {
+                validator: Number.isInteger,
+                message: 'max_documents_per_table must be an integer'
+            }
         },
         
         // API Configuration
         cors_origins: [{
             type: String,
-            default: '*'
+            validate: {
+                validator: function(v) {
+                    return v === '*' || /^https?:\/\/.+/.test(v);
+                },
+                message: 'Invalid CORS origin format'
+            }
         }]
     },
 
@@ -71,11 +94,21 @@ const projectSchema = new Schema({
     usage_stats: {
         api_requests_count: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0,
+            validate: {
+                validator: Number.isInteger,
+                message: 'api_requests_count must be an integer'
+            }
         },
         storage_used_mb: {
             type: Number,
-            default: 0
+            default: 0,
+            min: 0,
+            validate: {
+                validator: Number.isInteger,
+                message: 'storage_used_mb must be an integer'
+            }
         }
     }
 
@@ -126,10 +159,19 @@ projectSchema.methods.updateUsage = function(type, amount = 1) {
 };
 
 projectSchema.methods.isWithinLimits = function() {
-    // Simple limit checking
+    const config = this.config || {};
+    const usage = this.usage_stats || {};
+
+    const maxApiRequests = (config.max_databases || 3) * (config.max_tables_per_db || 10) * 100;
+    const maxStorageMb = (config.max_databases || 3) * 50;
+
     return {
-        api_requests: this.usage_stats.api_requests_count < 10000, // 10k requests limit
-        storage: this.usage_stats.storage_used_mb < 100 // 100MB limit
+        api_requests: usage.api_requests_count < maxApiRequests,
+        storage: usage.storage_used_mb < maxStorageMb,
+        limits: {
+            max_api_requests: maxApiRequests,
+            max_storage_mb: maxStorageMb
+        }
     };
 };
 
@@ -161,6 +203,28 @@ projectSchema.statics.findByName = function(owner_Id, projectName) {
         status: { $ne: 'deleted' }
     }).lean();
 };
+
+// Pre-validate middleware: enforce usage <= config limits
+projectSchema.pre('validate', function(next) {
+    const config = this.config || {};
+    const usage = this.usage_stats || {};
+
+    // API requests limit: config.max_databases * config.max_tables_per_db * 100 (arbitrary factor)
+    const maxApiRequests = (config.max_databases || 3) * (config.max_tables_per_db || 10) * 100;
+    if (usage.api_requests_count > maxApiRequests) {
+        this.invalidate('usage_stats.api_requests_count', 
+            `API requests (${usage.api_requests_count}) exceed limit (${maxApiRequests})`);
+    }
+
+    // Storage limit: config.max_databases * 50 MB per database
+    const maxStorageMb = (config.max_databases || 3) * 50;
+    if (usage.storage_used_mb > maxStorageMb) {
+        this.invalidate('usage_stats.storage_used_mb',
+            `Storage used (${usage.storage_used_mb}MB) exceeds limit (${maxStorageMb}MB)`);
+    }
+
+    next();
+});
 
 // Pre-save middleware
 projectSchema.pre('save', function() {
