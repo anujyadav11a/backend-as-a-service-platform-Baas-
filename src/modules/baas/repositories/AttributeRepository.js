@@ -124,7 +124,7 @@ export const AttributeRepository = {
     return { deleted: attribute };
   },
 
-  async findByName(collectionId, name, excludeId) {
+async findByName(collectionId, name, excludeId) {
     let query = 'SELECT id FROM attributes WHERE name = ? AND collection_id = ?';
     const params = [name, collectionId];
 
@@ -143,5 +143,21 @@ export const AttributeRepository = {
       [collectionId]
     );
     return rows[0].count;
+  },
+
+  async findAllByCollectionId(collectionId) {
+    const [rows] = await mysqlPool.promise().execute(
+      'SELECT id, collection_id, database_id, name, type, required, project_id, created_at, updated_at FROM attributes WHERE collection_id = ? ORDER BY created_at ASC',
+      [collectionId]
+    );
+    return rows;
+  },
+
+  async deleteAllByCollectionId(collectionId) {
+    const [result] = await mysqlPool.promise().execute(
+      'DELETE FROM attributes WHERE collection_id = ?',
+      [collectionId]
+    );
+    return { deletedCount: result.affectedRows };
   },
 };
