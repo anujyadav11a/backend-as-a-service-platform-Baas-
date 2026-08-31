@@ -4,6 +4,8 @@ import { logger } from '../../../shared/utils/Logger.js';
 import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { ProjectEvents } from '../../../shared/events/projectEvents.js';
+import { SagaRunner } from '../../../shared/utils/sagaRunner.js';
+import { DatabaseService } from '../../baas/services/DatabaseService.js';
 
 export class ProjectService {
     static async create({ name, description, ownerId }) {
@@ -180,7 +182,7 @@ export class ProjectService {
     }
 
     static async delete(projectId, ownerId) {
-        logger.info('Deleting project', { projectId, ownerId });
+        logger.info('Deleting project with cascade', { projectId, ownerId });
 
         const project = await Project.findOne({
             $or: [
@@ -195,29 +197,76 @@ export class ProjectService {
             throw ApiError.notFound('Project not found');
         }
 
-        project.status = 'deleted';
-        await project.save();
+        const projectIdStr = project.project_id;
+        const projectMongoId = project._id;
+
+        // Define saga steps
+        const sagaSteps = [
+            {
+                name: 'delete-all-databases',
+                execute: async (context) => {
+                    await DatabaseService.deleteAllForProject({ 
+                        projectId: projectIdStr, 
+                        userId: ownerId 
+                    });
+                    context.databasesDeleted = true;
+                },
+                compensate: async (context) => {
+                    // Databases are soft-deleted in MySQL, compensation would require manual intervention
+                    logger.warn('Compensation: databases were deleted, manual recovery may be needed', { 
+                        projectId: projectIdStr 
+                    });
+                }
+            },
+            {
+                name: 'soft-delete-project',
+                execute: async () => {
+                    project.status = 'deleted';
+                    await project.save();
+                },
+                compensate: async () => {
+                    // Re-activate project if needed
+                    const proj = await Project.findById(projectMongoId);
+                    if (proj && proj.status === 'deleted') {
+                        proj.status = 'active';
+                        await proj.save();
+                        logger.info('Compensation: project re-activated', { projectId: projectIdStr });
+                    }
+                }
+            }
+        ];
+
+        try {
+            await SagaRunner.run(sagaSteps, { projectId: projectIdStr, ownerId });
+        } catch (error) {
+            logger.error('Project deletion saga failed', { 
+                projectId: projectIdStr, 
+                error: error.message,
+                originalError: error.originalError?.message 
+            });
+            throw ApiError.internal('Failed to delete project and associated resources');
+        }
 
         // Invalidate all related caches
         await invalidateCache([
             'project-list:' + ownerId,
             'project:' + projectId,
             'sdk-details:' + ownerId,
-            'database-list:' + project.project_id
+            'database-list:' + projectIdStr
         ]);
 
-        logger.info('Project deleted successfully', { projectId: project._id, ownerId });
+        logger.info('Project deleted successfully with cascade', { projectId: projectMongoId, ownerId });
 
         // Emit domain event
         eventBus.emit(ProjectEvents.PROJECT_DELETED, {
-            projectId: project._id,
-            project_id: project.project_id,
+            projectId: projectMongoId,
+            project_id: projectIdStr,
             ownerId
         });
 
         return {
-            id: project._id,
-            project_id: project.project_id,
+            id: projectMongoId,
+            project_id: projectIdStr,
             name: project.name
         };
     }
