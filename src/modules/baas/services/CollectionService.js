@@ -5,6 +5,8 @@ import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { BaaSEvents } from '../../../shared/events/baasEvents.js';
+import { DocumentService } from './DocumentService.js';
+import { AttributeService } from './AttributeService.js';
 
 export class CollectionService {
   static async create({ projectId, databaseId, name, userId }) {
@@ -126,5 +128,36 @@ export class CollectionService {
       created_at: col.created_at,
       updated_at: col.updated_at
     }));
+  }
+
+  static async deleteAllForDatabase({ projectId, databaseId, userId }) {
+    logger.info('Deleting all collections for database', { databaseId, projectId, userId });
+
+    const collections = await CollectionRepository.findAllByDatabaseId(databaseId, projectId);
+    
+    for (const col of collections) {
+      await this._deleteCollectionCascade(col.id, projectId, userId);
+    }
+
+    const result = await CollectionRepository.deleteAllByDatabaseId(databaseId, projectId);
+
+    logger.info('All collections deleted for database', { databaseId, projectId, deletedCount: result.deletedCount, userId });
+    
+    return { deletedCount: result.deletedCount };
+  }
+
+  static async _deleteCollectionCascade(collectionId, projectId, userId) {
+    logger.info('Deleting collection cascade', { collectionId, projectId, userId });
+
+    await DocumentService.deleteAllForCollection({ collectionId, projectId, userId });
+    await AttributeService.deleteAllForCollection({ collectionId, projectId, userId });
+
+    logger.info('Collection cascade deleted', { collectionId, projectId });
+    
+    eventBus.emit(BaaSEvents.COLLECTION_DELETED, {
+      collectionId,
+      projectId,
+      userId
+    });
   }
 }

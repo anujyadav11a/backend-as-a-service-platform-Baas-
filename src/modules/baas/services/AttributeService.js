@@ -292,4 +292,14 @@ export class AttributeService {
       documentsAffected: 0
     };
   }
+
+  static async deleteAllForCollection({ collectionId, projectId, userId }) {
+    logger.info('Deleting all attributes for collection', { collectionId, projectId, userId });
+
+    const result = await AttributeRepository.deleteAllByCollectionId(collectionId);
+
+    logger.info('All attributes deleted for collection', { collectionId, projectId, deletedCount: result.deletedCount, userId });
+    
+    return { deletedCount: result.deletedCount };
+  }
 }
