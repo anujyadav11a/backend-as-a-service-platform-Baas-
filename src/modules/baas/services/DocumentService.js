@@ -7,6 +7,7 @@ import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { BaaSEvents } from '../../../shared/events/baasEvents.js';
+import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
 
 const validOperators = [
   'equals', 'notEquals',
@@ -372,5 +373,15 @@ export class DocumentService {
     });
 
     return { success: true };
+  }
+
+  static async deleteAllForCollection({ collectionId, projectId, userId }) {
+    logger.info('Deleting all documents for collection', { collectionId, projectId, userId });
+
+    const result = await DocumentRepository.deleteAllByCollectionId(collectionId, projectId);
+
+    logger.info('All documents deleted for collection', { collectionId, projectId, deletedCount: result.deletedCount, userId });
+    
+    return { deletedCount: result.deletedCount };
   }
 }
