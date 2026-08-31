@@ -367,7 +367,14 @@ async function createTenantSessionsCollection(db) {
     { key: { expires_at: 1 }, name: 'idx_expires_at_ttl', expireAfterSeconds: 0 },
     { key: { last_activity: 1 }, name: 'idx_last_activity' },
     { key: { status: 1 }, name: 'idx_status' },
-    { key: { login_time: -1 }, name: 'idx_login_time_desc' }
+    { key: { login_time: -1 }, name: 'idx_login_time_desc' },
+
+    // Compound indexes for common query patterns
+    { key: { user_id: 1, status: 1, login_time: -1 }, name: 'idx_user_status_login_time' },
+    { key: { user_id: 1, status: 1, expires_at: 1 }, name: 'idx_user_status_expires' },
+    { key: { user_id: 1, status: 1, last_activity: -1 }, name: 'idx_user_status_last_activity' },
+    { key: { status: 1, updatedAt: 1 }, name: 'idx_status_updated_at' },
+    { key: { project_id: 1, user_id: 1, status: 1 }, name: 'idx_project_user_status' }
   ]);
 
   console.log(`✅ Created collection: ${collectionName} with validation and TTL indexes`);
@@ -436,7 +443,12 @@ async function createConsoleSessionsCollection(db) {
     { key: { refresh_token: 1 }, unique: true, name: 'idx_refresh_token_unique' },
     { key: { expires_at: 1 }, name: 'idx_expires_at_ttl', expireAfterSeconds: 0 },
     { key: { last_activity: 1 }, name: 'idx_last_activity' },
-    { key: { is_active: 1 }, name: 'idx_is_active' }
+    { key: { is_active: 1 }, name: 'idx_is_active' },
+
+    // Compound indexes for common query patterns
+    { key: { user_id: 1, is_active: 1, expires_at: 1 }, name: 'idx_user_active_expires' },      // findActiveSessions()
+    { key: { user_id: 1, is_active: 1 }, name: 'idx_user_active_only' },                         // invalidateAllUserSessions()
+    { key: { is_active: 1, updatedAt: 1 }, name: 'idx_active_updated_at' }                       // cleanupExpiredSessions() is_active: false
   ]);
 
   console.log(`✅ Created collection: ${collectionName} with validation and TTL indexes`);
