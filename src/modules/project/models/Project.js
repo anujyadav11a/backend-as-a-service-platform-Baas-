@@ -163,23 +163,14 @@ projectSchema.statics.findByName = function(owner_Id, projectName) {
 };
 
 // Pre-save middleware
-projectSchema.pre('save', async function() {
-    // Generate project_id and api_key if new project
+projectSchema.pre('save', function() {
     if (this.isNew) {
-        // Generate unique project ID
-        let projectId;
-        let isUnique = false;
-        
-        while (!isUnique) {
-            projectId = this.generateProjectId();
-            const existing = await this.constructor.findOne({ project_id: projectId });
-            if (!existing) {
-                isUnique = true;
-            }
+        if (!this.project_id) {
+            this.project_id = this.generateProjectId();
         }
-        
-        this.project_id = projectId;
-        this.api_key = this.generateApiKey();
+        if (!this.api_key) {
+            this.api_key = this.generateApiKey();
+        }
     }
 });
 

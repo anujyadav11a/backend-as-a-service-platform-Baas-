@@ -19,32 +19,46 @@ export class ProjectService {
             throw ApiError.forbidden('Project limit reached. Maximum 5 projects allowed.');
         }
 
-        const project = new Project({
-            name,
-            description: description || '',
-            owner_id: ownerId
-        });
+        const MAX_ATTEMPTS = 5;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                const project = new Project({
+                    name,
+                    description: description || '',
+                    owner_id: ownerId
+                });
 
-        await project.save();
+                await project.save();
 
-        // Invalidate project list cache for this user
-        await invalidateCache(['project-list:' + ownerId]);
+                // Invalidate project list cache for this user
+                await invalidateCache(['project-list:' + ownerId]);
 
-        logger.info('Project created successfully', { 
-            projectId: project._id, 
-            project_id: project.project_id,
-            ownerId 
-        });
+                logger.info('Project created successfully', {
+                    projectId: project._id,
+                    project_id: project.project_id,
+                    ownerId
+                });
 
-        // Emit domain event
-        eventBus.emit(ProjectEvents.PROJECT_CREATED, {
-            projectId: project._id,
-            project_id: project.project_id,
-            name: project.name,
-            ownerId
-        });
+                // Emit domain event
+                eventBus.emit(ProjectEvents.PROJECT_CREATED, {
+                    projectId: project._id,
+                    project_id: project.project_id,
+                    name: project.name,
+                    ownerId
+                });
 
-        return project;
+                return project;
+            } catch (err) {
+                const isProjectIdDup = err.code === 11000 && err.keyValue?.project_id;
+                if (isProjectIdDup && attempt < MAX_ATTEMPTS) {
+                    logger.warn('project_id collision, retrying', { attempt, projectId: err.keyValue.project_id });
+                    continue;
+                }
+                throw err;
+            }
+        }
+
+        throw ApiError.conflict('Unable to allocate unique project_id');
     }
 
     static async listByOwner(ownerId) {
