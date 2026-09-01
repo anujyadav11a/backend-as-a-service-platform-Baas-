@@ -1,22 +1,31 @@
-/**
- * Centralized cookie configuration for security hardening
- * 
- * Secure cookies in all environments (requires HTTPS in dev via mkcert or tunnel)
- * sameSite: 'lax' for better compatibility while maintaining CSRF protection
- * httpOnly: true to prevent XSS
- * partitioned: true for Chrome's CHIPS (cross-site cookie isolation)
- */
+
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+/**
+ * Canonical cookie names — single source of truth for setting & reading.
+ */
+export const COOKIE_NAMES = {
+  console: {
+    access: 'AccessToken',
+    refresh: 'RefreshToken',
+    session: 'sessionId',
+  },
+  tenant: {
+    access: 'tenantAccessToken',
+    refresh: 'tenantRefreshToken',
+    session: 'sessionId',
+  },
+};
 
 /**
  * Base cookie options applied to all cookies
  */
 export const baseCookieOptions = {
     httpOnly: true,
-    secure: true, // Always true - requires HTTPS in all environments
-    sameSite: 'lax', // CSRF-safe with better compatibility than 'strict'
-    partitioned: true, // Chrome CHIPS support for cross-site cookie isolation
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax',
+    partitioned: isProduction,
 };
 
 /**
@@ -48,35 +57,33 @@ export const sessionCookieOptions = {
  */
 export const clearCookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    partitioned: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax',
+    partitioned: isProduction,
 };
 
 /**
  * Helper to set auth cookies consistently
  */
 export const setAuthCookies = (res, tokens, type = 'console') => {
-    const prefix = type === 'tenant' ? 'tenant' : '';
-    const refreshName = `${prefix}RefreshToken`;
-    const accessName = `${prefix}AccessToken`;
-    const sessionName = 'sessionId';
+    const { access, refresh, session } = COOKIE_NAMES[type];
 
-    res.cookie(refreshName, tokens.refreshToken, refreshTokenCookieOptions)
-       .cookie(accessName, tokens.accessToken, accessTokenCookieOptions)
-       .cookie(sessionName, tokens.sessionToken, sessionCookieOptions);
+    res.cookie(refresh, tokens.refreshToken, refreshTokenCookieOptions)
+       .cookie(access, tokens.accessToken, accessTokenCookieOptions)
+       .cookie(session, tokens.sessionToken, sessionCookieOptions);
+
+       return res;
 };
 
 /**
  * Helper to clear auth cookies consistently
  */
 export const clearAuthCookies = (res, type = 'console') => {
-    const prefix = type === 'tenant' ? 'tenant' : '';
-    const refreshName = `${prefix}RefreshToken`;
-    const accessName = `${prefix}AccessToken`;
-    const sessionName = 'sessionId';
+    const { access, refresh, session } = COOKIE_NAMES[type];
 
-    res.clearCookie(refreshName, clearCookieOptions)
-       .clearCookie(accessName, clearCookieOptions)
-       .clearCookie(sessionName, clearCookieOptions);
+    res.clearCookie(refresh, clearCookieOptions)
+       .clearCookie(access, clearCookieOptions)
+       .clearCookie(session, clearCookieOptions);
+
+       return res;
 };
