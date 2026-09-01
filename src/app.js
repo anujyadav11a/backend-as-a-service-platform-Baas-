@@ -15,8 +15,13 @@ import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler.
 import { refreshTokenMiddleware } from './shared/middleware/auth.middleware.js';
 import { tenantRefreshTokenMiddleware } from './middleware/tenantAuth.middleware.js';
 import { sessionMiddleware } from './middleware/googleauthsession.middleware.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerDocumnet from '../docs/swagger.js';
+
+
 
 const app = express();
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocumnet));
 
 const Options={
     origin:process.env.CORS_ORIGIN,
