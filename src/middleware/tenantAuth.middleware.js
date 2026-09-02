@@ -4,7 +4,9 @@ import { TenantSession } from '../modules/auth/models/TenantSession.js';
 import { ApiError } from '../shared/utils/apierror.js';
 import { logger } from '../shared/utils/Logger.js';
 import { asyncHandler } from '../shared/utils/asynchandler.js';
-import { accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
+import { COOKIE_NAMES, accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
+
+const { access: TENANT_ACCESS_COOKIE, refresh: TENANT_REFRESH_COOKIE, session: TENANT_SESSION_COOKIE } = COOKIE_NAMES.tenant;
 
 /**
  * Middleware to authenticate tenant users
@@ -12,8 +14,8 @@ import { accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
 export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
     try {
         // Get token from cookies or Authorization header
-        const token = req.cookies?.tenantAccessToken || 
-                     req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.cookies?.[TENANT_ACCESS_COOKIE] || 
+                      req.header("Authorization")?.replace("Bearer ", "");
 
         if (!token) {
             throw ApiError.unauthorized("Access token is required");
@@ -30,7 +32,7 @@ export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
         }
 
         // Verify session is still active
-        const sessionId = req.cookies?.sessionId;
+        const sessionId = req.cookies?.[TENANT_SESSION_COOKIE];
         if (sessionId) {
             const session = await TenantSession.findOne({
                 _id: sessionId,
@@ -80,7 +82,7 @@ export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
  * Middleware to refresh tenant token if it's about to expire
  */
 export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) => {
-    const refreshToken = req.cookies?.tenantRefreshToken;
+    const refreshToken = req.cookies?.[TENANT_REFRESH_COOKIE];
     
     if (!refreshToken) {
         return next();
@@ -92,7 +94,7 @@ export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) 
 
         if (user) {
             // Check if access token is about to expire (within 5 minutes)
-            const accessToken = req.cookies?.tenantAccessToken;
+            const accessToken = req.cookies?.[TENANT_ACCESS_COOKIE];
             if (accessToken) {
                 const decodedAccessToken = jwt.decode(accessToken);
                 const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
@@ -101,7 +103,7 @@ export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) 
                     // Generate new access token
                     const newAccessToken = user.generateAccessToken();
                     
-                    res.cookie("tenantAccessToken", newAccessToken, accessTokenCookieOptions);
+                    res.cookie(TENANT_ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
 
                     logger.info('Tenant access token refreshed', { userId: user._id });
                 }
