@@ -4,7 +4,6 @@ import { ConsoleSession } from '../models/ConsoleSession.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
-import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
 import crypto from 'crypto';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { AuthEvents } from '../../../shared/events/authEvents.js';
