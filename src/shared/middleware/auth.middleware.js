@@ -4,13 +4,15 @@ import { ConsoleSession } from '../../modules/auth/models/ConsoleSession.js';
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
-import { accessTokenCookieOptions } from '../utils/cookieUtils.js';
+import { COOKIE_NAMES, accessTokenCookieOptions, refreshTokenCookieOptions } from '../utils/cookieUtils.js';
+
+const { access: ACCESS_COOKIE, refresh: REFRESH_COOKIE, session: SESSION_COOKIE } = COOKIE_NAMES.console;
 
 export const authMiddleware = asyncHandler(async (req, res, next) => {
     try {
         // Get token from cookies or Authorization header
-        const token = req.cookies?.accessToken || 
-                     req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.cookies?.[ACCESS_COOKIE] || 
+                      req.header("Authorization")?.replace("Bearer ", "");
 
         if (!token) {
             throw ApiError.unauthorized("Access token is required");
@@ -26,29 +28,7 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
             throw ApiError.unauthorized("Invalid access token");
         }
 
-        // Optional: Verify session is still active
-        const sessionToken = req.cookies?.sessionId;
-        if (sessionToken) {
-            const session = await ConsoleSession.findOne({
-                session_token: sessionToken,
-                user_id: user._id,
-                is_active: true
-            });
 
-            if (!session || session.isExpired()) {
-                logger.warn('Session expired or invalid', { 
-                    userId: user._id, 
-                    sessionToken: sessionToken?.substring(0, 8) + '...' 
-                });
-                throw ApiError.unauthorized("Session expired");
-            }
-
-            // Update last activity
-            await session.updateActivity();
-            req.session = session;
-        }
-
-        // Attach user to request
         req.user = user;
         next();
 
@@ -71,6 +51,8 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
         throw ApiError.internal("Authentication failed");
     }
 });
+
+
 
 /**
  * Optional middleware to check if user has specific role
@@ -101,7 +83,7 @@ export const requireRole = (roles) => {
  * Also rotates refresh token when used (with reuse detection)
  */
 export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
-    const refreshToken = req.cookies?.refreshToken;
+    const refreshToken = req.cookies?.[REFRESH_COOKIE];
     
     if (!refreshToken) {
         return next();
@@ -115,7 +97,7 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
         
         if (isRefreshTokenValid) {
             // Check if access token is about to expire (within 5 minutes)
-            const accessToken = req.cookies?.accessToken;
+            const accessToken = req.cookies?.[ACCESS_COOKIE];
             if (accessToken) {
                 const decodedAccessToken = jwt.decode(accessToken);
                 const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
@@ -139,11 +121,8 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
                         await session.save();
                     }
 
-                    res.cookie("accessToken", newAccessToken, accessTokenCookieOptions);
-                    res.cookie("refreshToken", newRefreshToken, {
-                        ...accessTokenCookieOptions,
-                        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-                    });
+                    res.cookie(ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
+                    res.cookie(REFRESH_COOKIE, newRefreshToken, refreshTokenCookieOptions);
 
                     logger.info('Tokens rotated successfully', { userId: user._id });
                 }

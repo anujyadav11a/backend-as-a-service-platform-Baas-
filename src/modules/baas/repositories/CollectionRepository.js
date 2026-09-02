@@ -67,11 +67,27 @@ export const CollectionRepository = {
     return { deleted: collection };
   },
 
-  async existsByName(databaseId, name) {
+async existsByName(databaseId, name) {
     const [rows] = await mysqlPool.promise().execute(
       'SELECT id FROM collections WHERE name = ? AND database_id = ?',
       [name.trim(), databaseId]
     );
     return rows.length > 0;
+  },
+
+  async findAllByDatabaseId(databaseId, projectId) {
+    const [rows] = await mysqlPool.promise().execute(
+      'SELECT id, database_id, name, project_id, created_at, updated_at FROM collections WHERE database_id = ? AND project_id = ? ORDER BY created_at DESC',
+      [databaseId, projectId]
+    );
+    return rows;
+  },
+
+  async deleteAllByDatabaseId(databaseId, projectId) {
+    const [result] = await mysqlPool.promise().execute(
+      'DELETE FROM collections WHERE database_id = ? AND project_id = ?',
+      [databaseId, projectId]
+    );
+    return { deletedCount: result.affectedRows };
   },
 };

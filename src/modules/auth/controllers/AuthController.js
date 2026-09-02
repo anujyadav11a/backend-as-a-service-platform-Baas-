@@ -1,5 +1,9 @@
 import { AuthService } from '../services/AuthService.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
+import * as cookieUtils from '../../../shared/utils/cookieUtils.js';
+import { logger } from '../../../shared/utils/Logger.js';
+  
+console.log('cookieUtils keys:', Object.keys(cookieUtils));
 
 export class AuthController {
     static async register(req, res) {
@@ -14,6 +18,12 @@ export class AuthController {
         const { email, password } = req.body;
         const result = await AuthService.login({ email, password, req });
 
+        cookieUtils.setAuthCookies(res, {
+            accessToken: result.tokens.accessToken,
+            refreshToken: result.tokens.refreshToken,
+            sessionToken: result.tokens.sessionToken
+        }, 'console');
+
         const response = new ApiResponse(
             200,
             {
@@ -24,9 +34,7 @@ export class AuthController {
             "User logged in successfully"
         );
 
-        return res
-            .status(response.statuscode)
-            .json(result.cookies(res, result));
+        return res.status(response.statuscode).json(response);
     }
 
     static async refreshToken(req, res) {
@@ -39,6 +47,12 @@ export class AuthController {
 
         const result = await AuthService.refreshToken(refreshToken, req);
 
+        cookieUtils.setAuthCookies(res, {
+            accessToken: result.tokens.accessToken,
+            refreshToken: result.tokens.refreshToken,
+            sessionToken: result.tokens.sessionToken    
+        }, 'console');
+
         const response = new ApiResponse(
             200,
             {
@@ -47,22 +61,10 @@ export class AuthController {
             "Token refreshed successfully"
         );
 
-        return res
-            .status(response.statuscode)
-            .json(result.cookies(res, result));
+        return res.status(response.statuscode).json(response);
     }
 
-    static async logout(req, res) {
-        const sessionToken = req.cookies?.sessionId;
-        const userId = req.user?.id;
-
-        const result = await AuthService.logout({ sessionToken, userId });
-
-        const response = new ApiResponse(200, null, "User logged out successfully");
-        return res
-            .status(response.statuscode)
-            .json(result(res));
-    }
+    
 
     static async getSessions(req, res) {
         const userId = req.user?.id;
@@ -80,5 +82,28 @@ export class AuthController {
 
         const response = new ApiResponse(200, null, "Session revoked successfully");
         return res.status(response.statuscode).json(response);
+    }
+
+    static async logout(req, res) {
+       
+        try {
+            const refreshToken = req.cookies?.RefreshToken;
+            const userId = req.user?.id || req.user?._id;
+            console.log('>>> userId:', userId, 'hasRefreshToken:', !!refreshToken);
+
+            await AuthService.logout({ refreshToken, userId });
+            
+            cookieUtils.clearAuthCookies(res, 'console');
+
+            logger.info('Console user logged out', { userId });
+
+            const response = new ApiResponse(200, null, "Logged out successfully");
+            console.log('>>> LOGOUT HANDLER SUCCESS');
+            return res.status(response.statuscode).json(response);
+        } catch (err) {
+            console.error('>>> LOGOUT HANDLER ERROR:', err.message);
+            console.error('>>> Stack:', err.stack);
+            throw err;
+        }
     }
 }

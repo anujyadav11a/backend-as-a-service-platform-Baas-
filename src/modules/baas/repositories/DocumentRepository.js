@@ -124,7 +124,7 @@ export const DocumentRepository = {
     return { updated: updatedDocRows[0] };
   },
 
-  async deleteById(id, projectId) {
+async deleteById(id, projectId) {
     const sanitizedDocumentId = id.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
@@ -138,5 +138,16 @@ export const DocumentRepository = {
     }
 
     return { deleted: true };
+  },
+
+  async deleteAllByCollectionId(collectionId, projectId) {
+    const sanitizedCollectionId = collectionId.trim();
+    const sanitizedProjectId = projectId.toString().trim();
+
+    const [result] = await mysqlPool.promise().execute(
+      "DELETE FROM documents WHERE collection_id = ? AND project_id = ?",
+      [sanitizedCollectionId, sanitizedProjectId]
+    );
+    return { deletedCount: result.affectedRows };
   },
 };

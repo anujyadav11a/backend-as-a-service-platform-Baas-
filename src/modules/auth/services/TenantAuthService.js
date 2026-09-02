@@ -4,7 +4,6 @@ import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
-import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
 import crypto from 'crypto';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { AuthEvents } from '../../../shared/events/authEvents.js';
@@ -217,7 +216,8 @@ export class TenantAuthService {
             tokens: {
                 accessToken
             },
-            cookies: setAuthCookies(null, tokens, 'tenant')
+            refreshToken,
+            sessionId: session._id.toString()
         };
     }
 
@@ -261,7 +261,7 @@ export class TenantAuthService {
 
         logger.info('Tenant user logged out successfully', { userId });
 
-        return clearAuthCookies(null, 'tenant');
+        return { success: true };
     }
 
     static async getSessions(userId, projectId) {

@@ -3,8 +3,8 @@ import { AuthController } from '../controllers/AuthController.js';
 import { TenantAuthController } from '../controllers/TenantAuthController.js';
 import { OAuthController } from '../controllers/OAuthController.js';
 import { validate } from '../../../shared/middleware/validate.js';
-import { authMiddleware } from '../../../shared/middleware/auth.middleware.js';
-import { tenantAuthMiddleware } from '../../../shared/middleware/tenantAuth.middleware.js';
+import { authMiddleware, logoutAuthMiddleware } from '../../../shared/middleware/auth.middleware.js';
+import { tenantAuthMiddleware } from '../../../middleware/tenantAuth.middleware.js';
 import { strictRateLimiter } from '../../../shared/middleware/ratelimiter.middleware.js';
 import { registerSchema, loginSchema, logoutSchema, tenantRegisterSchema, tenantLoginSchema, revokeSessionSchema, refreshTokenSchema } from '../../../shared/validation/auth.js';
 
@@ -15,6 +15,7 @@ router.post('/register', strictRateLimiter, validate(registerSchema), AuthContro
 router.post('/login', strictRateLimiter, validate(loginSchema), AuthController.login);
 router.post('/refresh', strictRateLimiter, validate(refreshTokenSchema), AuthController.refreshToken);
 router.post('/logout', authMiddleware, validate(logoutSchema), AuthController.logout);
+
 router.get('/sessions', authMiddleware, AuthController.getSessions);
 router.delete('/sessions/:sessionId', authMiddleware, validate(revokeSessionSchema), AuthController.revokeSession);
 

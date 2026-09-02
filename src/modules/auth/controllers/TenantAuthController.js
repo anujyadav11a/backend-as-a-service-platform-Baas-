@@ -1,5 +1,6 @@
 import { TenantAuthService } from '../services/TenantAuthService.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
+import { setAuthCookies, clearAuthCookies } from '../../../shared/utils/cookieUtils.js';
 
 export class TenantAuthController {
     static async register(req, res) {
@@ -32,6 +33,13 @@ export class TenantAuthController {
             req 
         });
 
+        // Set cookies on response
+        setAuthCookies(res, {
+            accessToken: result.tokens.accessToken,
+            refreshToken: result.refreshToken, // service returns refreshToken directly
+            sessionToken: result.session.id
+        }, 'tenant');
+
         const response = new ApiResponse(
             200,
             {
@@ -42,21 +50,20 @@ export class TenantAuthController {
             "User logged in successfully"
         );
 
-        return res
-            .status(response.statuscode)
-            .json(result.cookies(res, result));
+        return res.status(response.statuscode).json(response);
     }
 
     static async logout(req, res) {
         const refreshToken = req.cookies?.tenantRefreshToken;
         const userId = req.user?.id || req.user?._id;
 
-        const result = await TenantAuthService.logout({ refreshToken, userId });
+        await TenantAuthService.logout({ refreshToken, userId });
+        
+        // Clear cookies
+        clearAuthCookies(res, 'tenant');
 
         const response = new ApiResponse(200, null, "User logged out successfully");
-        return res
-            .status(response.statuscode)
-            .json(result(res));
+        return res.status(response.statuscode).json(response);
     }
 
     static async getSessions(req, res) {
