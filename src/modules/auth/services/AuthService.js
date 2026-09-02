@@ -227,44 +227,14 @@ export class AuthService {
                 location: session.location
             },
             tokens: {
-                accessToken
-            },
-            cookies: setAuthCookies(null, tokens, 'console')
+                accessToken,
+                refreshToken,
+                sessionToken
+            }
         };
     }
 
-    static async logout({ sessionToken, userId }) {
-        logger.info('User logout attempt', { userId, hasSessionToken: !!sessionToken });
-
-        if (sessionToken) {
-            const session = await ConsoleSession.findOne({ 
-                session_token: sessionToken, 
-                is_active: true 
-            });
-
-            if (session) {
-                await session.invalidate();
-                logger.info('Session invalidated on logout', { 
-                    sessionId: session._id, 
-                    userId: session.user_id 
-                });
-
-                // Emit domain event
-                eventBus.emit(AuthEvents.USER_LOGGED_OUT, {
-                    userId: session.user_id,
-                    sessionId: session._id
-                });
-            }
-        }
-
-        if (userId) {
-            await User.findByIdAndUpdate(userId, { refreshtoken: null });
-        }
-
-        logger.info('User logged out successfully', { userId });
-
-        return clearAuthCookies(null, 'console');
-    }
+    
 
     static async getSessions(userId) {
         const sessions = await ConsoleSession.findActiveSessions(userId);
@@ -305,17 +275,12 @@ export class AuthService {
 
             const { accessToken, refreshToken: newRefreshToken } = await rotateRefreshToken(userId, refreshToken, req);
 
-            const tokens = {
-                accessToken,
-                refreshToken: newRefreshToken,
-                sessionToken: req.cookies?.sessionId
-            };
-
             return {
                 tokens: {
-                    accessToken
-                },
-                cookies: setAuthCookies(null, tokens, 'console')
+                    accessToken,
+                    refreshToken: newRefreshToken,
+                    sessionToken: req.cookies?.sessionId
+                }
             };
         } catch (error) {
             if (error instanceof ApiError) {
@@ -326,6 +291,42 @@ export class AuthService {
             }
             logger.error('Token refresh failed', { error: error.message });
             throw ApiError.internal("Failed to refresh token");
+}
+    }
+
+    static async logout({ refreshToken, userId }) {
+        logger.info('Console user logout attempt', { userId, hasRefreshToken: !!refreshToken });
+
+        if (refreshToken) {
+            const sessions = await ConsoleSession.findActiveSessions(userId);
+
+            let matchedSession = null;
+            for (const session of sessions) {
+                const isMatch = await session.compareRefreshToken(refreshToken);
+                if (isMatch) {
+                    matchedSession = session;
+                    break;
+                }
+            }
+
+            if (matchedSession) {
+                await matchedSession.invalidate();
+
+                logger.info('Console session invalidated on logout', {
+                    sessionId: matchedSession._id,
+                    userId: matchedSession.user_id
+                });
+
+                // Emit domain event
+                eventBus.emit(AuthEvents.USER_LOGGED_OUT, {
+                    userId: matchedSession.user_id,
+                    sessionId: matchedSession._id
+                });
+            }
         }
+
+        logger.info('Console user logged out successfully', { userId });
+
+        return { success: true };
     }
 }
