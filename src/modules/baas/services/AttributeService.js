@@ -1,6 +1,4 @@
-import { AttributeRepository } from '../repositories/AttributeRepository.js';
-import { CollectionRepository } from '../repositories/CollectionRepository.js';
-import { DatabaseRepository } from '../repositories/DatabaseRepository.js';
+import { getRepositories } from '../repositories/factory.js';
 import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
@@ -60,6 +58,18 @@ function validateAttributeName(name) {
 }
 
 export class AttributeService {
+  static get attribute() {
+    return getRepositories().attribute;
+  }
+
+  static get collection() {
+    return getRepositories().collection;
+  }
+
+  static get database() {
+    return getRepositories().database;
+  }
+
   static async create({ projectId, collectionId, databaseId, name, type, required = false, userId }) {
     logger.info('Adding new column to collection', { collectionId, name, type, required, projectId, databaseId });
 
@@ -83,22 +93,22 @@ export class AttributeService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const database = await DatabaseRepository.findById(databaseId);
+    const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
       throw ApiError.notFound('Database not found');
     }
 
-    const collection = await CollectionRepository.findById(collectionId, projectId);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection || collection.database_id !== databaseId) {
       throw ApiError.notFound('Collection not found');
     }
 
-    const exists = await AttributeRepository.findByName(collectionId, name);
+    const exists = await this.attribute.findByName(collectionId, name);
     if (exists) {
       throw ApiError.conflict('Attribute with this name already exists in the collection');
     }
 
-    const result = await AttributeRepository.create({
+    const result = await this.attribute.create({
       projectId,
       collectionId,
       databaseId,
@@ -141,12 +151,12 @@ export class AttributeService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const collection = await CollectionRepository.findById(collectionId, projectId);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionId, projectId);
+    const attributes = await this.attribute.findByCollectionId(collectionId, projectId);
 
     return attributes.map(attr => ({
       id: attr.id,
@@ -177,12 +187,12 @@ export class AttributeService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const collection = await CollectionRepository.findById(collectionId, projectId);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
     }
 
-    const existingAttr = await AttributeRepository.findById(attributeId, projectId);
+    const existingAttr = await this.attribute.findById(attributeId, projectId);
     if (!existingAttr) {
       throw ApiError.notFound('Attribute not found or does not belong to your project');
     }
@@ -195,7 +205,7 @@ export class AttributeService {
 
     if (name !== undefined) {
       validateAttributeName(name);
-      const exists = await AttributeRepository.findByName(collectionId, name, attributeId);
+      const exists = await this.attribute.findByName(collectionId, name, attributeId);
       if (exists) {
         throw ApiError.conflict('An attribute with this name already exists in the collection');
       }
@@ -214,7 +224,7 @@ export class AttributeService {
       updates.required = required ? 1 : 0;
     }
 
-    const result = await AttributeRepository.update(attributeId, projectId, updates);
+    const result = await this.attribute.update(attributeId, projectId, updates);
 
     if (result.notFound) {
       throw ApiError.notFound('Attribute not found or does not belong to your project');
@@ -253,12 +263,12 @@ export class AttributeService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const collection = await CollectionRepository.findById(collectionId, projectId);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
     }
 
-    const result = await AttributeRepository.deleteById(attributeId, projectId);
+    const result = await this.attribute.deleteById(attributeId, projectId);
 
     if (result.notFound) {
       throw ApiError.notFound('Attribute not found or does not belong to your project');
@@ -296,7 +306,7 @@ export class AttributeService {
   static async deleteAllForCollection({ collectionId, projectId, userId }) {
     logger.info('Deleting all attributes for collection', { collectionId, projectId, userId });
 
-    const result = await AttributeRepository.deleteAllByCollectionId(collectionId);
+    const result = await this.attribute.deleteAllByCollectionId(collectionId);
 
     logger.info('All attributes deleted for collection', { collectionId, projectId, deletedCount: result.deletedCount, userId });
     

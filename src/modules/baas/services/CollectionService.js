@@ -1,5 +1,4 @@
-import { CollectionRepository } from '../repositories/CollectionRepository.js';
-import { DatabaseRepository } from '../repositories/DatabaseRepository.js';
+import { getRepositories } from '../repositories/factory.js';
 import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
@@ -9,6 +8,14 @@ import { DocumentService } from './DocumentService.js';
 import { AttributeService } from './AttributeService.js';
 
 export class CollectionService {
+  static get collection() {
+    return getRepositories().collection;
+  }
+
+  static get database() {
+    return getRepositories().database;
+  }
+
   static async create({ projectId, databaseId, name, userId }) {
     logger.info('Creating new collection', { userId, name, databaseId, projectId });
 
@@ -22,17 +29,17 @@ export class CollectionService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const database = await DatabaseRepository.findById(databaseId);
+    const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
       throw ApiError.notFound('Database not found');
     }
 
-    const exists = await CollectionRepository.existsByName(databaseId, name);
+    const exists = await this.collection.existsByName(databaseId, name);
     if (exists) {
       throw ApiError.conflict('Collection with this name already exists in the database');
     }
 
-    const result = await CollectionRepository.create({ projectId, databaseId, name });
+    const result = await this.collection.create({ projectId, databaseId, name });
 
     if (result.exists) {
       throw ApiError.conflict('Collection with this name already exists in the database');
@@ -70,12 +77,12 @@ export class CollectionService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const collection = await CollectionRepository.findById(collectionId, projectId);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
     }
 
-    const result = await CollectionRepository.deleteById(collectionId, projectId);
+    const result = await this.collection.deleteById(collectionId, projectId);
 
     if (result.notFound) {
       throw ApiError.notFound('Collection not found');
@@ -113,12 +120,12 @@ export class CollectionService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const database = await DatabaseRepository.findById(databaseId);
+    const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
       throw ApiError.notFound('Database not found');
     }
 
-    const collections = await CollectionRepository.findByDatabaseId(databaseId, projectId);
+    const collections = await this.collection.findByDatabaseId(databaseId, projectId);
 
     return collections.map(col => ({
       id: col.id,
@@ -133,13 +140,13 @@ export class CollectionService {
   static async deleteAllForDatabase({ projectId, databaseId, userId }) {
     logger.info('Deleting all collections for database', { databaseId, projectId, userId });
 
-    const collections = await CollectionRepository.findAllByDatabaseId(databaseId, projectId);
+    const collections = await this.collection.findAllByDatabaseId(databaseId, projectId);
     
     for (const col of collections) {
       await this._deleteCollectionCascade(col.id, projectId, userId);
     }
 
-    const result = await CollectionRepository.deleteAllByDatabaseId(databaseId, projectId);
+    const result = await this.collection.deleteAllByDatabaseId(databaseId, projectId);
 
     logger.info('All collections deleted for database', { databaseId, projectId, deletedCount: result.deletedCount, userId });
     

@@ -1,7 +1,4 @@
-import { DocumentRepository } from '../repositories/DocumentRepository.js';
-import { AttributeRepository } from '../repositories/AttributeRepository.js';
-import { CollectionRepository } from '../repositories/CollectionRepository.js';
-import { DatabaseRepository } from '../repositories/DatabaseRepository.js';
+import { getRepositories } from '../repositories/factory.js';
 import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
@@ -138,6 +135,18 @@ function getCollectionIdFromContext(context) {
 }
 
 export class DocumentService {
+  static get document() {
+    return getRepositories().document;
+  }
+
+  static get attribute() {
+    return getRepositories().attribute;
+  }
+
+  static get collection() {
+    return getRepositories().collection;
+  }
+
   static async create({ collectionId, projectId, data, authType, project }) {
     logger.info('Adding new document to collection', {
       collectionId, projectId, dataKeys: data ? Object.keys(data) : [], authType
@@ -150,7 +159,7 @@ export class DocumentService {
       throw ApiError.badRequest('Data must be a valid JSON object');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionIdToUse, projectIdToUse);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection. Please define the schema first.');
     }
@@ -162,7 +171,7 @@ export class DocumentService {
 
     const documentId = generateDocumentId();
 
-    const result = await DocumentRepository.create({
+    const result = await this.document.create({
       projectId: projectIdToUse,
       collectionId: collectionIdToUse,
       data
@@ -195,13 +204,13 @@ export class DocumentService {
     const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
     const collectionIdToUse = getCollectionIdFromContext({ collectionId });
 
-    const collection = await CollectionRepository.findById(collectionIdToUse, projectIdToUse);
+    const collection = await this.collection.findById(collectionIdToUse, projectIdToUse);
     if (!collection) {
       throw ApiError.badRequest('Invalid collection_id or project_id reference');
     }
 
-    const documents = await DocumentRepository.findByCollectionId(collectionIdToUse, projectIdToUse, { page, limit });
-    const totalDocuments = await DocumentRepository.countByCollectionId(collectionIdToUse, projectIdToUse);
+    const documents = await this.document.findByCollectionId(collectionIdToUse, projectIdToUse, { page, limit });
+    const totalDocuments = await this.document.countByCollectionId(collectionIdToUse, projectIdToUse);
     const totalPages = Math.ceil(totalDocuments / limit);
 
     return {
@@ -222,12 +231,12 @@ export class DocumentService {
     const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
     const collectionIdToUse = getCollectionIdFromContext({ collectionId });
 
-    const collection = await CollectionRepository.findById(collectionIdToUse, projectIdToUse);
+    const collection = await this.collection.findById(collectionIdToUse, projectIdToUse);
     if (!collection) {
       throw ApiError.badRequest('Invalid collection_id or project_id reference');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionIdToUse, projectIdToUse);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection');
     }
@@ -235,7 +244,7 @@ export class DocumentService {
     const attributeMap = new Map(attributes.map(attr => [attr.name, attr.type]));
     const filterConditions = buildFilterConditions(filters, attributeMap);
 
-    const allDocuments = await DocumentRepository.findAllByCollectionId(collectionIdToUse, projectIdToUse);
+    const allDocuments = await this.document.findAllByCollectionId(collectionIdToUse, projectIdToUse);
     let filteredDocuments = allDocuments.map(doc => ({
       id: doc.id,
       collection_id: doc.collection_id,
@@ -300,7 +309,7 @@ export class DocumentService {
     const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
     const collectionIdToUse = getCollectionIdFromContext({ collectionId });
 
-    const document = await DocumentRepository.findById(documentId, projectIdToUse);
+    const document = await this.document.findById(documentId, projectIdToUse);
     if (!document) {
       throw ApiError.notFound('Document not found');
     }
@@ -319,12 +328,12 @@ export class DocumentService {
       throw ApiError.badRequest('Data must be a valid JSON object');
     }
 
-    const existingDoc = await DocumentRepository.findById(documentId, projectIdToUse);
+    const existingDoc = await this.document.findById(documentId, projectIdToUse);
     if (!existingDoc) {
       throw ApiError.notFound('Document not found');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionIdToUse, projectIdToUse);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection');
     }
@@ -334,7 +343,7 @@ export class DocumentService {
       throw ApiError.badRequest(`Data validation failed: ${validationResult.errors.join(', ')}`);
     }
 
-    const result = await DocumentRepository.updateById(documentId, projectIdToUse, data);
+    const result = await this.document.updateById(documentId, projectIdToUse, data);
     if (result.notFound) {
       throw ApiError.notFound('Document not found or no changes made');
     }
@@ -358,7 +367,7 @@ export class DocumentService {
     const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
     const collectionIdToUse = getCollectionIdFromContext({ collectionId });
 
-    const result = await DocumentRepository.deleteById(documentId, projectIdToUse);
+    const result = await this.document.deleteById(documentId, projectIdToUse);
     if (result.notFound) {
       throw ApiError.notFound('Document not found');
     }
@@ -378,7 +387,7 @@ export class DocumentService {
   static async deleteAllForCollection({ collectionId, projectId, userId }) {
     logger.info('Deleting all documents for collection', { collectionId, projectId, userId });
 
-    const result = await DocumentRepository.deleteAllByCollectionId(collectionId, projectId);
+    const result = await this.document.deleteAllByCollectionId(collectionId, projectId);
 
     logger.info('All documents deleted for collection', { collectionId, projectId, deletedCount: result.deletedCount, userId });
     

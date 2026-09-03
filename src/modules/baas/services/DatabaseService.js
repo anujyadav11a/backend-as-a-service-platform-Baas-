@@ -1,5 +1,4 @@
-import { DatabaseRepository } from '../repositories/DatabaseRepository.js';
-import { CollectionRepository } from '../repositories/CollectionRepository.js';
+import { getRepositories, initializeRepositories } from '../repositories/factory.js';
 import { Project } from '../../project/models/Project.js';
 import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
@@ -9,6 +8,10 @@ import { BaaSEvents } from '../../../shared/events/baasEvents.js';
 import { CollectionService } from './CollectionService.js';
 
 export class DatabaseService {
+  static get db() {
+    return getRepositories().database;
+  }
+
   static async create({ projectId, name, userId }) {
     logger.info('Creating new database', { userId, name, projectId });
 
@@ -22,12 +25,12 @@ export class DatabaseService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const exists = await DatabaseRepository.existsByName(projectId, name);
+    const exists = await this.db.existsByName(projectId, name);
     if (exists) {
       throw ApiError.conflict('Database with this name already exists in the project');
     }
 
-    const result = await DatabaseRepository.create({ projectId, name });
+    const result = await this.db.create({ projectId, name });
 
     if (result.exists) {
       throw ApiError.conflict('Database with this name already exists in the project');
@@ -55,7 +58,7 @@ export class DatabaseService {
   static async delete({ projectId, databaseId, userId }) {
     logger.info('Deleting database', { databaseId, userId });
 
-    const database = await DatabaseRepository.findById(databaseId);
+    const database = await this.db.findById(databaseId);
     if (!database) {
       throw ApiError.notFound('Database not found');
     }
@@ -70,7 +73,7 @@ export class DatabaseService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const result = await DatabaseRepository.deleteById(databaseId, database.project_id);
+    const result = await this.db.deleteById(databaseId, database.project_id);
 
     if (result.notFound) {
       throw ApiError.notFound('Database not found');
@@ -112,7 +115,7 @@ export class DatabaseService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const databases = await DatabaseRepository.findByProjectId(projectId);
+    const databases = await this.db.findByProjectId(projectId);
 
     return databases.map(db => ({
       id: db.id,
@@ -136,13 +139,13 @@ export class DatabaseService {
       throw ApiError.forbidden('Project not found or access denied');
     }
 
-    const databases = await DatabaseRepository.findAllByProjectId(projectId);
+    const databases = await this.db.findAllByProjectId(projectId);
     
     for (const db of databases) {
       await this._deleteDatabaseCascade(db.id, projectId, userId);
     }
 
-    const result = await DatabaseRepository.deleteAllByProjectId(projectId);
+    const result = await this.db.deleteAllByProjectId(projectId);
 
     logger.info('All databases deleted for project', { projectId, deletedCount: result.deletedCount, userId });
     
@@ -152,7 +155,7 @@ export class DatabaseService {
   static async _deleteDatabaseCascade(databaseId, projectId, userId) {
     logger.info('Deleting database cascade', { databaseId, projectId, userId });
 
-    const database = await DatabaseRepository.findById(databaseId);
+    const database = await this.db.findById(databaseId);
     if (!database) {
       logger.warn('Database not found during cascade delete', { databaseId });
       return;
