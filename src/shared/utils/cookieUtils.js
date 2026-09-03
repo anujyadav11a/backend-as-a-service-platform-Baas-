@@ -1,6 +1,8 @@
 
 
-const isProduction = process.env.NODE_ENV === 'production';
+import config from '../config/env.js';
+
+const isProduction = config.app.isProduction;
 
 /**
  * Canonical cookie names — single source of truth for setting & reading.

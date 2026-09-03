@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import config from '../config/env.js';
 
 /**
  * Validates and returns the encryption key for OAuth token encryption
@@ -6,7 +7,7 @@ import crypto from 'crypto';
  * @returns {Buffer} 32-byte key for AES-256
  */
 export function getEncryptionKey() {
-    const secretKey = process.env.OAUTH_ENCRYPTION_KEY;
+    const secretKey = config.oauth.encryptionKey;
     
     if (!secretKey) {
         throw new Error('OAUTH_ENCRYPTION_KEY environment variable is required but not set');

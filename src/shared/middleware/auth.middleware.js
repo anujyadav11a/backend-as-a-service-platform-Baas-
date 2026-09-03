@@ -5,6 +5,7 @@ import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
 import { COOKIE_NAMES, accessTokenCookieOptions, refreshTokenCookieOptions } from '../utils/cookieUtils.js';
+import config from '../config/env.js';
 
 const { access: ACCESS_COOKIE, refresh: REFRESH_COOKIE, session: SESSION_COOKIE } = COOKIE_NAMES.console;
 
@@ -19,7 +20,7 @@ export const authMiddleware = asyncHandler(async (req, res, next) => {
         }
 
         // Verify JWT token
-        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const decodedToken = jwt.verify(token, config.jwt.accessTokenSecret);
         
         // Find user
         const user = await User.findById(decodedToken._id).select("-password -refreshtoken");
@@ -90,7 +91,7 @@ export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
     }
 
     try {
-        const decodedRefreshToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const decodedRefreshToken = jwt.verify(refreshToken, config.jwt.refreshTokenSecret);
         const user = await User.findById(decodedRefreshToken._id);
 
         const isRefreshTokenValid = user && await user.compareRefreshToken(refreshToken);

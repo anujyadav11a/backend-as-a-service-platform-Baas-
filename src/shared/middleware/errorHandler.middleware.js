@@ -1,5 +1,6 @@
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
+import config from '../config/env.js';
 
 export const errorHandler = (err, req, res, next) => {
     let error = err;
@@ -31,7 +32,7 @@ export const errorHandler = (err, req, res, next) => {
         statuscode: error.statuscode,
         timestamp: error.timestamp,
         ...(error.errors.length > 0 && { errors: error.errors }),
-        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+        ...(config.app.isDevelopment && { stack: error.stack })
     };
 
     res.status(error.statuscode).json(response);
@@ -50,7 +51,7 @@ process.on('unhandledRejection', (reason, promise) => {
         stack: reason.stack
     });
     // Don't exit the process in production
-    if (process.env.NODE_ENV !== 'production') {
+    if (!config.app.isProduction) {
         process.exit(1);
     }
 });
