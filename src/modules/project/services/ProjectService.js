@@ -5,7 +5,8 @@ import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { ProjectEvents } from '../../../shared/events/projectEvents.js';
 import { SagaRunner } from '../../../shared/utils/sagaRunner.js';
-import { DatabaseService } from '../../baas/services/DatabaseService.js';
+import { createDeleteDatabasesStep, createSoftDeleteProjectStep } from '../utils/projectSagaUtils.js';
+import config from '../../../shared/config/env.js';
 
 export class ProjectService {
     static async create({ name, description, ownerId }) {
@@ -76,7 +77,7 @@ export class ProjectService {
             name: project.name,
             description: project.description,
             api_key: project.api_key,
-            api_endpoint: `${process.env.API_BASE_URL || 'http://localhost:8000'}/api/v1/${project.project_id}`,
+            api_endpoint: `${config.api.baseUrl}/api/v1/${project.project_id}`,
             status: project.status,
             usage: {
                 api_requests: project.usage_stats.api_requests_count,
@@ -200,40 +201,10 @@ export class ProjectService {
         const projectIdStr = project.project_id;
         const projectMongoId = project._id;
 
-        // Define saga steps
+        // Define saga steps using extracted utilities
         const sagaSteps = [
-            {
-                name: 'delete-all-databases',
-                execute: async (context) => {
-                    await DatabaseService.deleteAllForProject({ 
-                        projectId: projectIdStr, 
-                        userId: ownerId 
-                    });
-                    context.databasesDeleted = true;
-                },
-                compensate: async (context) => {
-                    // Databases are soft-deleted in MySQL, compensation would require manual intervention
-                    logger.warn('Compensation: databases were deleted, manual recovery may be needed', { 
-                        projectId: projectIdStr 
-                    });
-                }
-            },
-            {
-                name: 'soft-delete-project',
-                execute: async () => {
-                    project.status = 'deleted';
-                    await project.save();
-                },
-                compensate: async () => {
-                    // Re-activate project if needed
-                    const proj = await Project.findById(projectMongoId);
-                    if (proj && proj.status === 'deleted') {
-                        proj.status = 'active';
-                        await proj.save();
-                        logger.info('Compensation: project re-activated', { projectId: projectIdStr });
-                    }
-                }
-            }
+            createDeleteDatabasesStep(projectIdStr, ownerId),
+            createSoftDeleteProjectStep(projectMongoId, projectIdStr)
         ];
 
         try {
@@ -316,7 +287,7 @@ export class ProjectService {
         return {
             project_id: project.project_id,
             api_key: project.api_key,
-            api_endpoint: `${process.env.API_BASE_URL || 'http://localhost:8000'}/api/v1/${project.project_id}`,
+            api_endpoint: `${config.api.baseUrl}/api/v1/${project.project_id}`,
             project_name: project.name
         };
     }
