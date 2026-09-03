@@ -7,128 +7,9 @@ import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHel
 import crypto from 'crypto';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { AuthEvents } from '../../../shared/events/authEvents.js';
-
-const generateAccessAndRefreshToken = async (userId) => {
-    try {
-        const user = await User.findById(userId);
-        if (!user) {
-            logger.error('User not found during token generation', { userId });
-            throw ApiError.notFound("User not found");
-        }
-        
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-        
-        user.refreshtoken = refreshToken;
-        await user.save({ validateBeforeSave: false });
-
-        logger.info('Tokens generated successfully', { userId });
-        return { accessToken, refreshToken };
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw error;
-        }
-        logger.error('Token generation failed', { userId, error: error.message });
-        throw ApiError.internal("Failed to generate authentication tokens");
-    }
-};
-
-const rotateRefreshToken = async (userId, oldRefreshToken, req) => {
-    try {
-        const user = await User.findById(userId);
-        if (!user) {
-            logger.error('User not found during token rotation', { userId });
-            throw ApiError.notFound("User not found");
-        }
-
-        // Verify the old refresh token matches
-        const isValid = await user.compareRefreshToken(oldRefreshToken);
-        if (!isValid) {
-            // REUSE DETECTION: Token doesn't match - possible theft
-            logger.warn('Refresh token reuse detected - revoking all sessions', { userId });
-            
-            // Revoke all user sessions
-            await ConsoleSession.invalidateAllUserSessions(userId);
-            await User.findByIdAndUpdate(userId, { refreshtoken: null });
-            
-            // Emit security event
-            eventBus.emit(AuthEvents.REFRESH_TOKEN_REUSE_DETECTED, {
-                userId,
-                ip: req?.ip,
-                userAgent: req?.headers?.['user-agent']
-            });
-            
-            throw ApiError.unauthorized("Token reuse detected. All sessions revoked for security.");
-        }
-
-        // Generate new token pair
-        const accessToken = user.generateAccessToken();
-        const newRefreshToken = user.generateRefreshToken();
-        
-        // Update user with new refresh token
-        user.refreshtoken = newRefreshToken;
-        await user.save({ validateBeforeSave: false });
-
-        // Update session with new refresh token
-        const session = await ConsoleSession.findOne({
-            user_id: userId,
-            is_active: true
-        });
-        
-        if (session) {
-            session.refresh_token = newRefreshToken;
-            await session.save();
-        }
-
-        logger.info('Refresh token rotated successfully', { userId });
-        return { accessToken, refreshToken: newRefreshToken };
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw error;
-        }
-        logger.error('Token rotation failed', { userId, error: error.message });
-        throw ApiError.internal("Failed to rotate authentication tokens");
-    }
-};
-
-const createUserSession = async (user, req, sessionToken, refreshToken) => {
-    try {
-        const userAgent = req.headers['user-agent'] || 'Unknown';
-        const deviceInfo = parseUserAgent(userAgent);
-        
-        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
-        
-        const session = new ConsoleSession({
-            user_id: user._id,
-            session_token: sessionToken,
-            refresh_token: refreshToken,
-            ip_address: ipAddress,
-            user_agent: userAgent,
-            device_info: deviceInfo,
-            location: await getLocationFromIP(ipAddress),
-            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            login_method: 'email_password',
-            is_active: true
-        });
-
-        const savedSession = await session.save();
-        
-        logger.info('User session created', {
-            userId: user._id,
-            sessionId: savedSession._id,
-            ipAddress,
-            deviceType: deviceInfo.device_type
-        });
-
-        return savedSession;
-    } catch (error) {
-        logger.error('Failed to create user session', {
-            userId: user._id,
-            error: error.message
-        });
-        throw ApiError.internal("Failed to create user session");
-    }
-};
+import config from '../../../shared/config/env.js';
+import { generateAccessAndRefreshToken, rotateRefreshToken } from '../utils/tokenUtils.js';
+import { createUserSession } from '../utils/sessionUtils.js';
 
 export class AuthService {
     static async register({ name, email, password }) {
@@ -269,7 +150,7 @@ export class AuthService {
 
     static async refreshToken(refreshToken, req) {
         try {
-            const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+            const decoded = jwt.verify(refreshToken, config.jwt.refreshTokenSecret);
             const userId = decoded._id;
 
             const { accessToken, refreshToken: newRefreshToken } = await rotateRefreshToken(userId, refreshToken, req);
