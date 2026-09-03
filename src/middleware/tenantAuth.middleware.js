@@ -5,6 +5,7 @@ import { ApiError } from '../shared/utils/apierror.js';
 import { logger } from '../shared/utils/Logger.js';
 import { asyncHandler } from '../shared/utils/asynchandler.js';
 import { COOKIE_NAMES, accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
+import config from '../shared/config/env.js';
 
 const { access: TENANT_ACCESS_COOKIE, refresh: TENANT_REFRESH_COOKIE, session: TENANT_SESSION_COOKIE } = COOKIE_NAMES.tenant;
 
@@ -22,7 +23,7 @@ export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
         }
 
         // Verify JWT token
-        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+        const decodedToken = jwt.verify(token, config.jwt.accessTokenSecret);
         
         // Find tenant user
         const user = await TenantUser.findById(decodedToken._id).select("-password");
@@ -89,7 +90,7 @@ export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) 
     }
 
     try {
-        const decodedRefreshToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const decodedRefreshToken = jwt.verify(refreshToken, config.jwt.refreshTokenSecret);
         const user = await TenantUser.findById(decodedRefreshToken._id);
 
         if (user) {
