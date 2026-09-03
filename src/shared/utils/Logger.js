@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import config from '../config/env.js';
 
 class Logger {
     constructor() {
@@ -49,7 +50,7 @@ class Logger {
     }
 
     debug(message, meta = {}) {
-        if (process.env.NODE_ENV === 'development') {
+        if (config.app.isDevelopment) {
             const logMessage = this.formatMessage('DEBUG', message, meta);
             console.log(`🟢 [DEBUG] ${message}`, meta);
             this.writeToFile('debug.log', logMessage);
