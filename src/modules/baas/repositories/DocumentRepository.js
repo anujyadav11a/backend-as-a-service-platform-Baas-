@@ -1,18 +1,16 @@
-import { mysqlPool } from "../../../shared/config/db.js";
-
-export const DocumentRepository = {
+export const createDocumentRepository = (pool) => ({
   async create({ projectId, collectionId, data }) {
     const sanitizedCollectionId = collectionId.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
     const documentId = "doc_" + Date.now() + "_" + Math.random().toString(36).substring(2, 11);
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       "INSERT INTO documents (id, collection_id, data, project_id) VALUES (?, ?, ?, ?)",
       [documentId, sanitizedCollectionId, JSON.stringify(data), sanitizedProjectId]
     );
 
-    const [documentRows] = await mysqlPool.promise().execute(
+    const [documentRows] = await pool.promise().execute(
       "SELECT * FROM documents WHERE id = ?",
       [documentId]
     );
@@ -24,7 +22,7 @@ export const DocumentRepository = {
     const sanitizedDocumentId = id.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       "SELECT * FROM documents WHERE id = ? AND project_id = ?",
       [sanitizedDocumentId, sanitizedProjectId]
     );
@@ -50,7 +48,7 @@ export const DocumentRepository = {
     const limitNumber = parseInt(limit);
     const offset = (pageNumber - 1) * limitNumber;
 
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       "SELECT * FROM documents WHERE collection_id = ? AND project_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
       [sanitizedCollectionId, sanitizedProjectId, limitNumber, offset]
     );
@@ -68,7 +66,7 @@ export const DocumentRepository = {
     const sanitizedCollectionId = collectionId.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       "SELECT COUNT(*) as total FROM documents WHERE collection_id = ? AND project_id = ?",
       [sanitizedCollectionId, sanitizedProjectId]
     );
@@ -80,7 +78,7 @@ export const DocumentRepository = {
     const sanitizedCollectionId = collectionId.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       "SELECT * FROM documents WHERE collection_id = ? AND project_id = ?",
       [sanitizedCollectionId, sanitizedProjectId]
     );
@@ -98,7 +96,7 @@ export const DocumentRepository = {
     const sanitizedDocumentId = id.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [existingDocRows] = await mysqlPool.promise().execute(
+    const [existingDocRows] = await pool.promise().execute(
       "SELECT collection_id FROM documents WHERE id = ? AND project_id = ?",
       [sanitizedDocumentId, sanitizedProjectId]
     );
@@ -107,7 +105,7 @@ export const DocumentRepository = {
       return { notFound: true };
     }
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       "UPDATE documents SET data = ? WHERE id = ? AND project_id = ?",
       [JSON.stringify(data), sanitizedDocumentId, sanitizedProjectId]
     );
@@ -116,7 +114,7 @@ export const DocumentRepository = {
       return { notFound: true };
     }
 
-    const [updatedDocRows] = await mysqlPool.promise().execute(
+    const [updatedDocRows] = await pool.promise().execute(
       "SELECT * FROM documents WHERE id = ? AND project_id = ?",
       [sanitizedDocumentId, sanitizedProjectId]
     );
@@ -124,11 +122,11 @@ export const DocumentRepository = {
     return { updated: updatedDocRows[0] };
   },
 
-async deleteById(id, projectId) {
+  async deleteById(id, projectId) {
     const sanitizedDocumentId = id.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       "DELETE FROM documents WHERE id = ? AND project_id = ?",
       [sanitizedDocumentId, sanitizedProjectId]
     );
@@ -144,10 +142,10 @@ async deleteById(id, projectId) {
     const sanitizedCollectionId = collectionId.trim();
     const sanitizedProjectId = projectId.toString().trim();
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       "DELETE FROM documents WHERE collection_id = ? AND project_id = ?",
       [sanitizedCollectionId, sanitizedProjectId]
     );
     return { deletedCount: result.affectedRows };
   },
-};
+});

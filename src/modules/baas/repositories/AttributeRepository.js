@@ -1,6 +1,4 @@
-import { mysqlPool } from '../../../shared/config/db.js';
-
-export const AttributeRepository = {
+export const createAttributeRepository = (pool) => ({
   async create({ projectId, collectionId, databaseId, name, type, required }) {
     const sanitizedName = name.trim();
     const sanitizedType = type.trim().toUpperCase();
@@ -8,12 +6,12 @@ export const AttributeRepository = {
     const sanitizedProjectId = projectId.trim();
     const sanitizedDatabaseId = databaseId.trim();
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       'INSERT INTO attributes (collection_id, database_id, name, type, required, project_id) VALUES (?, ?, ?, ?, ?, ?)',
       [sanitizedCollectionId, sanitizedDatabaseId, sanitizedName, sanitizedProjectId, sanitizedType, required ? 1 : 0]
     );
 
-    const [newAttributeRows] = await mysqlPool.promise().execute(
+    const [newAttributeRows] = await pool.promise().execute(
       'SELECT * FROM attributes WHERE id = ?',
       [result.insertId]
     );
@@ -22,7 +20,7 @@ export const AttributeRepository = {
   },
 
   async findById(id, projectId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT * FROM attributes WHERE id = ? AND project_id = ?',
       [id, projectId]
     );
@@ -30,7 +28,7 @@ export const AttributeRepository = {
   },
 
   async findByCollectionId(collectionId, projectId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT id, collection_id, database_id, name, type, required, project_id, created_at, updated_at FROM attributes WHERE collection_id = ? AND project_id = ? ORDER BY created_at ASC',
       [collectionId, projectId]
     );
@@ -38,7 +36,7 @@ export const AttributeRepository = {
   },
 
   async update(id, projectId, updates) {
-    const [existingAttr] = await mysqlPool.promise().execute(
+    const [existingAttr] = await pool.promise().execute(
       'SELECT * FROM attributes WHERE id = ? AND project_id = ?',
       [id, projectId]
     );
@@ -70,12 +68,12 @@ export const AttributeRepository = {
 
     values.push(id, projectId);
 
-    await mysqlPool.promise().execute(
+    await pool.promise().execute(
       `UPDATE attributes SET ${setClauses.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND project_id = ?`,
       values
     );
 
-    const [updatedAttr] = await mysqlPool.promise().execute(
+    const [updatedAttr] = await pool.promise().execute(
       'SELECT * FROM attributes WHERE id = ?',
       [id]
     );
@@ -84,7 +82,7 @@ export const AttributeRepository = {
   },
 
   async deleteById(id, projectId) {
-    const [attributes] = await mysqlPool.promise().execute(
+    const [attributes] = await pool.promise().execute(
       'SELECT * FROM attributes WHERE id = ? AND project_id = ?',
       [id, projectId]
     );
@@ -95,7 +93,7 @@ export const AttributeRepository = {
 
     const attribute = attributes[0];
 
-    const [allAttributes] = await mysqlPool.promise().execute(
+    const [allAttributes] = await pool.promise().execute(
       'SELECT COUNT(*) as count FROM attributes WHERE collection_id = ?',
       [attribute.collection_id]
     );
@@ -104,7 +102,7 @@ export const AttributeRepository = {
       return { lastAttribute: true };
     }
 
-    const connection = await mysqlPool.getConnection();
+    const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
 
@@ -124,7 +122,7 @@ export const AttributeRepository = {
     return { deleted: attribute };
   },
 
-async findByName(collectionId, name, excludeId) {
+  async findByName(collectionId, name, excludeId) {
     let query = 'SELECT id FROM attributes WHERE name = ? AND collection_id = ?';
     const params = [name, collectionId];
 
@@ -133,12 +131,12 @@ async findByName(collectionId, name, excludeId) {
       params.push(excludeId);
     }
 
-    const [rows] = await mysqlPool.promise().execute(query, params);
+    const [rows] = await pool.promise().execute(query, params);
     return rows.length > 0;
   },
 
   async getAttributeCountByCollection(collectionId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT COUNT(*) as count FROM attributes WHERE collection_id = ?',
       [collectionId]
     );
@@ -146,7 +144,7 @@ async findByName(collectionId, name, excludeId) {
   },
 
   async findAllByCollectionId(collectionId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT id, collection_id, database_id, name, type, required, project_id, created_at, updated_at FROM attributes WHERE collection_id = ? ORDER BY created_at ASC',
       [collectionId]
     );
@@ -154,10 +152,10 @@ async findByName(collectionId, name, excludeId) {
   },
 
   async deleteAllByCollectionId(collectionId) {
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       'DELETE FROM attributes WHERE collection_id = ?',
       [collectionId]
     );
     return { deletedCount: result.affectedRows };
   },
-};
+});

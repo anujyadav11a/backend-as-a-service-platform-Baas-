@@ -1,11 +1,9 @@
-import { mysqlPool } from '../../../shared/config/db.js';
-
-export const DatabaseRepository = {
+export const createDatabaseRepository = (pool) => ({
   async create({ projectId, name }) {
     const sanitizedName = name.trim();
     const sanitizedProjectId = projectId;
 
-    const [existingRows] = await mysqlPool.promise().execute(
+    const [existingRows] = await pool.promise().execute(
       'SELECT id FROM databasess WHERE name = ? AND project_id = ?',
       [sanitizedName, sanitizedProjectId]
     );
@@ -14,12 +12,12 @@ export const DatabaseRepository = {
       return { exists: true };
     }
 
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       'INSERT INTO databasess (name, project_id) VALUES (?, ?)',
       [sanitizedName, sanitizedProjectId]
     );
 
-    const [createdRows] = await mysqlPool.promise().execute(
+    const [createdRows] = await pool.promise().execute(
       'SELECT * FROM databasess WHERE id = ?',
       [result.insertId]
     );
@@ -28,7 +26,7 @@ export const DatabaseRepository = {
   },
 
   async findById(id) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT * FROM databasess WHERE id = ?',
       [id]
     );
@@ -36,7 +34,7 @@ export const DatabaseRepository = {
   },
 
   async findByProjectId(projectId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT id, name, project_id, created_at, updated_at FROM databasess WHERE project_id = ? ORDER BY created_at DESC',
       [projectId]
     );
@@ -44,7 +42,7 @@ export const DatabaseRepository = {
   },
 
   async deleteById(id, projectId) {
-    const [checkRows] = await mysqlPool.promise().execute(
+    const [checkRows] = await pool.promise().execute(
       'SELECT id, name, project_id FROM databasess WHERE id = ?',
       [id]
     );
@@ -59,7 +57,7 @@ export const DatabaseRepository = {
       return { forbidden: true };
     }
 
-    await mysqlPool.promise().execute(
+    await pool.promise().execute(
       'DELETE FROM databasess WHERE id = ?',
       [id]
     );
@@ -67,8 +65,8 @@ export const DatabaseRepository = {
     return { deleted: database };
   },
 
-async existsByName(projectId, name) {
-    const [rows] = await mysqlPool.promise().execute(
+  async existsByName(projectId, name) {
+    const [rows] = await pool.promise().execute(
       'SELECT id FROM databasess WHERE name = ? AND project_id = ?',
       [name.trim(), projectId]
     );
@@ -76,7 +74,7 @@ async existsByName(projectId, name) {
   },
 
   async findAllByProjectId(projectId) {
-    const [rows] = await mysqlPool.promise().execute(
+    const [rows] = await pool.promise().execute(
       'SELECT id, name, project_id FROM databasess WHERE project_id = ?',
       [projectId]
     );
@@ -84,10 +82,10 @@ async existsByName(projectId, name) {
   },
 
   async deleteAllByProjectId(projectId) {
-    const [result] = await mysqlPool.promise().execute(
+    const [result] = await pool.promise().execute(
       'DELETE FROM databasess WHERE project_id = ?',
       [projectId]
     );
     return { deletedCount: result.affectedRows };
   },
-};
+});
