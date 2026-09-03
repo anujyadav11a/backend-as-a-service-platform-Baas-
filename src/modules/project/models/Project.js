@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import crypto from "crypto";
+import config from '../../../shared/config/env.js';
 
 const projectSchema = new Schema({
     // Basic Project Information
@@ -131,7 +132,7 @@ projectSchema.virtual('sdk_config').get(function() {
     return {
         project_id: this.project_id,
         api_key: this.api_key,
-        api_endpoint: `${process.env.API_BASE_URL || 'http://localhost:8000'}/api/v1/${this.project_id}`
+        api_endpoint: `${config.api.baseUrl}/api/v1/${this.project_id}`
     };
 });
 
