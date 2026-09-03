@@ -3,73 +3,10 @@ import { TenantSession } from '../models/TenantSession.js';
 import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
-import { parseUserAgent, getLocationFromIP } from '../../../shared/utils/authHelpers.js';
-import crypto from 'crypto';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { AuthEvents } from '../../../shared/events/authEvents.js';
-
-const generateAccessAndRefreshToken = async (userId) => {
-    try {
-        const user = await TenantUser.findById(userId);
-        if (!user) {
-            logger.error('Tenant user not found during token generation', { userId });
-            throw ApiError.notFound("User not found");
-        }
-        
-        const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-        
-        logger.info('Tenant tokens generated successfully', { userId, projectId: user.project_id });
-        return { accessToken, refreshToken };
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw error;
-        }
-        logger.error('Tenant token generation failed', { userId, error: error.message });
-        throw ApiError.internal("Failed to generate authentication tokens");
-    }
-};
-
-const createTenantSession = async (user, req, refreshToken) => {
-    try {
-        const userAgent = req.headers['user-agent'] || 'Unknown';
-        const deviceInfo = parseUserAgent(userAgent);
-
-        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
-
-        const locationData = await getLocationFromIP(ipAddress);
-
-        const sessionData = {
-            user_id: user._id,
-            project_id: user.project_id,
-            refresh_token: refreshToken,
-            device_info: deviceInfo,
-            location: {
-                ip_address: ipAddress,
-                ...locationData
-            }
-        };
-
-        const session = await TenantSession.createSession(sessionData);
-
-        logger.info('Tenant session created', {
-            userId: user._id,
-            projectId: user.project_id,
-            sessionId: session._id,
-            ipAddress,
-            deviceType: deviceInfo.device_type
-        });
-
-        return session;
-    } catch (error) {
-        logger.error('Failed to create tenant session', {
-            userId: user._id,
-            projectId: user.project_id,
-            error: error.message
-        });
-        throw ApiError.internal("Failed to create user session");
-    }
-};
+import { generateTenantAccessAndRefreshToken } from '../utils/tenantTokenUtils.js';
+import { createTenantSession } from '../utils/tenantSessionUtils.js';
 
 export class TenantAuthService {
     static async register({ username, email, password, projectId, apiKey }) {
