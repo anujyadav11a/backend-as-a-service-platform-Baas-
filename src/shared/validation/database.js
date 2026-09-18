@@ -11,7 +11,7 @@ export const createDatabaseSchema = z.object({
 
 export const deleteDatabaseSchema = z.object({
   params: z.object({
-    id: z.string().min(1, 'Database ID is required'),
+    database_id: z.string().min(1, 'Database ID is required'),
   }),
 });
 
