@@ -34,7 +34,7 @@ const projectSchema = new Schema({
     // API Key for authentication
     api_key: {
         type: String,
-        
+        index: { unique: true, sparse: true }
     },
 
     // Project Status
@@ -111,7 +111,40 @@ const projectSchema = new Schema({
                 message: 'storage_used_mb must be an integer'
             }
         }
-    }
+    },
+
+    // API Keys for project access
+    api_keys: [{
+        key_id: {
+            type: String,
+        },
+        api_key: {
+            type: String,
+        },
+        name: {
+            type: String,
+        },
+        permissions: [{
+            type: String,
+            enum: ['read', 'write', 'admin']
+        }],
+        environment: {
+            type: String,
+            enum: ['development', 'staging', 'production'],
+            default: 'development'
+        },
+        revoked: {
+            type: Boolean,
+            default: false
+        },
+        revoked_at: {
+            type: Date
+        },
+        created_at: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 
 }, {
     timestamps: true
@@ -120,10 +153,10 @@ const projectSchema = new Schema({
 // Indexes for performance
 projectSchema.index({ owner_id: 1, status: 1 });
 projectSchema.index({ createdAt: -1 });
-// Unique name per owner (case-insensitive)
+// Unique name per owner (case-insensitive) - only for non-deleted projects
 projectSchema.index({ owner_id: 1, name: 1 }, { 
     unique: true, 
-    partialFilterExpression: { status: { $ne: 'deleted' } }
+    partialFilterExpression: { status: { $in: ['active', 'suspended'] } }
 });
 
 
@@ -142,9 +175,32 @@ projectSchema.methods.generateProjectId = function() {
     return crypto.randomBytes(4).toString('hex');
 };
 
-projectSchema.methods.generateApiKey = function() {
-    // Generate a secure API key (32 characters)
-    return crypto.randomBytes(16).toString('hex');
+projectSchema.methods.generateApiKey = function(name, permissions, environment, ownerId) {
+    // Called without params from pre-save middleware (for initial project api_key)
+    // Called with params from ApiKeyService.generate (for additional API keys)
+    const keyId = `key_${crypto.randomBytes(8).toString('hex')}`;
+    const apiKey = crypto.randomBytes(16).toString('hex');
+    
+    // If called without name (from pre-save), just return the api_key string for the project-level field
+    if (!name) {
+        return apiKey;
+    }
+    
+    // Called with params - create full API key object for api_keys array
+    const apiKeyObj = {
+        key_id: keyId,
+        api_key: apiKey,
+        name,
+        permissions: permissions || ['read'],
+        environment: environment || 'development',
+        revoked: false,
+        created_at: new Date()
+    };
+    
+    this.api_keys = this.api_keys || [];
+    this.api_keys.push(apiKeyObj);
+    
+    return apiKeyObj;
 };
 
 projectSchema.methods.updateUsage = function(type, amount = 1) {
@@ -178,7 +234,7 @@ projectSchema.methods.isWithinLimits = function() {
 
 // Static methods
 projectSchema.statics.findByProjectId = function(project_Id) {
-    return this.findOne({ project_id: project_Id, status: 'active' }).lean();
+    return this.findOne({ project_id: project_Id, status: 'active' });
 };
 
 projectSchema.statics.findByApiKey = function(api_Key) {
@@ -206,25 +262,30 @@ projectSchema.statics.findByName = function(owner_Id, projectName) {
 };
 
 // Pre-validate middleware: enforce usage <= config limits
-projectSchema.pre('validate', function(next) {
+projectSchema.pre('validate', function () {
     const config = this.config || {};
     const usage = this.usage_stats || {};
 
-    // API requests limit: config.max_databases * config.max_tables_per_db * 100 (arbitrary factor)
-    const maxApiRequests = (config.max_databases || 3) * (config.max_tables_per_db || 10) * 100;
+    const maxApiRequests =
+        (config.max_databases || 3) *
+        (config.max_tables_per_db || 10) *
+        100;
+
     if (usage.api_requests_count > maxApiRequests) {
-        this.invalidate('usage_stats.api_requests_count', 
-            `API requests (${usage.api_requests_count}) exceed limit (${maxApiRequests})`);
+        this.invalidate(
+            'usage_stats.api_requests_count',
+            `API requests (${usage.api_requests_count}) exceed limit (${maxApiRequests})`
+        );
     }
 
-    // Storage limit: config.max_databases * 50 MB per database
     const maxStorageMb = (config.max_databases || 3) * 50;
-    if (usage.storage_used_mb > maxStorageMb) {
-        this.invalidate('usage_stats.storage_used_mb',
-            `Storage used (${usage.storage_used_mb}MB) exceeds limit (${maxStorageMb}MB)`);
-    }
 
-    next();
+    if (usage.storage_used_mb > maxStorageMb) {
+        this.invalidate(
+            'usage_stats.storage_used_mb',
+            `Storage used (${usage.storage_used_mb}MB) exceeds limit (${maxStorageMb}MB)`
+        );
+    }
 });
 
 // Pre-save middleware
