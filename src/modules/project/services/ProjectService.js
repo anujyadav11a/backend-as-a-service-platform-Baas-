@@ -7,6 +7,7 @@ import { ProjectEvents } from '../../../shared/events/projectEvents.js';
 import { SagaRunner } from '../../../shared/utils/sagaRunner.js';
 import { createDeleteDatabasesStep, createSoftDeleteProjectStep } from '../utils/projectSagaUtils.js';
 import config from '../../../shared/config/env.js';
+import mongoose from 'mongoose';
 
 export class ProjectService {
     static async create({ name, description, ownerId }) {
@@ -60,8 +61,6 @@ export class ProjectService {
                 throw err;
             }
         }
-
-        throw ApiError.conflict('Unable to allocate unique project_id');
     }
 
     static async listByOwner(ownerId) {
@@ -91,14 +90,15 @@ export class ProjectService {
     static async getById(projectId, ownerId) {
         logger.info('Fetching project details', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -125,14 +125,15 @@ export class ProjectService {
     static async update(projectId, ownerId, { name, description }) {
         logger.info('Updating project', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -185,14 +186,15 @@ export class ProjectService {
     static async delete(projectId, ownerId) {
         logger.info('Deleting project with cascade', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -271,14 +273,15 @@ export class ProjectService {
     static async getSDKConfig(projectId, ownerId) {
         logger.info('Fetching project for SDK config', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: 'active'
-        }).select('project_id api_key name status');
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = 'active';
+
+        const project = await Project.findOne(query).select('project_id api_key name status');
 
         if (!project) {
             throw ApiError.notFound('Project not found or inactive');
