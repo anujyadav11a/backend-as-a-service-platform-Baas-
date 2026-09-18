@@ -21,7 +21,10 @@ export const createDeleteDatabasesStep = (projectIdStr, ownerId) => ({
 export const createSoftDeleteProjectStep = (projectMongoId, projectIdStr) => ({
     name: 'soft-delete-project',
     execute: async () => {
-        const project = await Project.findById(projectMongoId);
+        const project = await Project.findOne({ 
+            _id: projectMongoId, 
+            status: { $ne: 'deleted' } 
+        });
         if (project) {
             project.status = 'deleted';
             await project.save();
