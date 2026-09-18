@@ -1,13 +1,16 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../../modules/auth/models/User.js';
-import { ConsoleSession } from '../../modules/auth/models/ConsoleSession.js';
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
 import { asyncHandler } from "../utils/asynchandler.js";
 import { COOKIE_NAMES, accessTokenCookieOptions, refreshTokenCookieOptions } from '../utils/cookieUtils.js';
 import config from '../config/env.js';
+import { redis } from '../config/redis.config.js';
 
 const { access: ACCESS_COOKIE, refresh: REFRESH_COOKIE, session: SESSION_COOKIE } = COOKIE_NAMES.console;
+
+const ROTATION_LOCK_TTL = 10; // seconds
+const ROTATION_LOCK_RETRY_DELAY = 50; // ms
 
 export const authMiddleware = asyncHandler(async (req, res, next) => {
     try {
@@ -84,54 +87,98 @@ export const requireRole = (roles) => {
  * Also rotates refresh token when used (with reuse detection)
  */
 export const refreshTokenMiddleware = asyncHandler(async (req, res, next) => {
+    // Skip explicit refresh endpoints - they handle their own rotation
+    if (req.path === '/api/v1/users/refresh' || req.path === '/api/v1/tenantuser/refresh') {
+        return next();
+    }
+
     const refreshToken = req.cookies?.[REFRESH_COOKIE];
     
     if (!refreshToken) {
         return next();
     }
 
+    let lockAcquired = false;
+    let lockValue = null;
+    let lockKey = null;
+
     try {
         const decodedRefreshToken = jwt.verify(refreshToken, config.jwt.refreshTokenSecret);
-        const user = await User.findById(decodedRefreshToken._id);
+        const userId = decodedRefreshToken._id;
 
+        lockKey = `token:rotate:${userId}`;
+        lockValue = `${Date.now()}:${Math.random()}`;
+
+        const acquired = await redis.set(lockKey, lockValue, 'EX', ROTATION_LOCK_TTL, 'NX');
+        
+        if (!acquired) {
+            await new Promise(r => setTimeout(r, ROTATION_LOCK_RETRY_DELAY));
+            return next();
+        }
+
+        lockAcquired = true;
+
+        const user = await User.findById(userId);
         const isRefreshTokenValid = user && await user.compareRefreshToken(refreshToken);
         
-        if (isRefreshTokenValid) {
-            // Check if access token is about to expire (within 5 minutes)
-            const accessToken = req.cookies?.[ACCESS_COOKIE];
-            if (accessToken) {
-                const decodedAccessToken = jwt.decode(accessToken);
-                const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
-                
-                if (timeUntilExpiry < 5 * 60 * 1000) { // Less than 5 minutes
-                    // Rotate both tokens (refresh token rotation with reuse detection)
-                    const newAccessToken = user.generateAccessToken();
-                    const newRefreshToken = user.generateRefreshToken();
-                    
-                    user.refreshtoken = newRefreshToken;
-                    await user.save({ validateBeforeSave: false });
+        if (!isRefreshTokenValid) {
+            return next();
+        }
 
-                    // Update session with new refresh token
-                    const session = await ConsoleSession.findOne({
-                        user_id: user._id,
-                        is_active: true
-                    });
-                    
-                    if (session) {
-                        session.refresh_token = newRefreshToken;
-                        await session.save();
-                    }
+        const accessToken = req.cookies?.[ACCESS_COOKIE];
+        if (!accessToken) {
+            return next();
+        }
 
-                    res.cookie(ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
-                    res.cookie(REFRESH_COOKIE, newRefreshToken, refreshTokenCookieOptions);
+        const decodedAccessToken = jwt.decode(accessToken);
+        const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
+        
+        if (timeUntilExpiry >= 5 * 60 * 1000) {
+            return next();
+        }
 
-                    logger.info('Tokens rotated successfully', { userId: user._id });
-                }
+        const newAccessToken = user.generateAccessToken();
+        const newRefreshToken = user.generateRefreshToken();
+        
+        user.refreshtoken = newRefreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        const session = await ConsoleSession.findOne({
+            user_id: user._id,
+            is_active: true
+        });
+        
+        if (session) {
+            session.refresh_token = newRefreshToken;
+            await session.save();
+        }
+
+        res.cookie(ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
+        res.cookie(REFRESH_COOKIE, newRefreshToken, refreshTokenCookieOptions);
+
+        logger.info('Tokens rotated successfully', { userId: user._id });
+
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            logger.debug('Refresh token validation failed', { error: error.message });
+        } else {
+            logger.error('Token rotation error', { error: error.message });
+        }
+    } finally {
+        if (lockAcquired && lockValue && lockKey) {
+            const releaseScript = `
+                if redis.call("get", KEYS[1]) == ARGV[1] then
+                    return redis.call("del", KEYS[1])
+                else
+                    return 0
+                end
+            `;
+            try {
+                await redis.eval(releaseScript, 1, lockKey, lockValue);
+            } catch (e) {
+                logger.warn('Failed to release rotation lock', { error: e.message });
             }
         }
-    } catch (error) {
-        // If refresh token is invalid, just continue
-        logger.debug('Refresh token validation failed', { error: error.message });
     }
 
     next();
