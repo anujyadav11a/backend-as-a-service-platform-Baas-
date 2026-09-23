@@ -15,8 +15,11 @@ const { access: TENANT_ACCESS_COOKIE, refresh: TENANT_REFRESH_COOKIE, session: T
 export const tenantAuthMiddleware = asyncHandler(async (req, res, next) => {
     try {
         // Get token from cookies or Authorization header
-        const token = req.cookies?.[TENANT_ACCESS_COOKIE] || 
-                      req.header("Authorization")?.replace("Bearer ", "");
+        const authorizationHeader = req.header("Authorization");
+        const token = req.cookies?.[TENANT_ACCESS_COOKIE] ||
+                      (authorizationHeader?.startsWith("Bearer ")
+                          ? authorizationHeader.slice("Bearer ".length)
+                          : undefined);
 
         if (!token) {
             throw ApiError.unauthorized("Access token is required");
@@ -98,15 +101,17 @@ export const tenantRefreshTokenMiddleware = asyncHandler(async (req, res, next) 
             const accessToken = req.cookies?.[TENANT_ACCESS_COOKIE];
             if (accessToken) {
                 const decodedAccessToken = jwt.decode(accessToken);
-                const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
-                
-                if (timeUntilExpiry < 5 * 60 * 1000) { // Less than 5 minutes
-                    // Generate new access token
-                    const newAccessToken = user.generateAccessToken();
-                    
-                    res.cookie(TENANT_ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
+                if (decodedAccessToken?.exp) {
+                    const timeUntilExpiry = decodedAccessToken.exp * 1000 - Date.now();
 
-                    logger.info('Tenant access token refreshed', { userId: user._id });
+                    if (timeUntilExpiry < 5 * 60 * 1000) { // Less than 5 minutes
+                    // Generate new access token
+                        const newAccessToken = user.generateAccessToken();
+
+                        res.cookie(TENANT_ACCESS_COOKIE, newAccessToken, accessTokenCookieOptions);
+
+                        logger.info('Tenant access token refreshed', { userId: user._id });
+                    }
                 }
             }
         }
