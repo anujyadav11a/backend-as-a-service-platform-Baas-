@@ -1,7 +1,7 @@
-import { Project } from "../../../modules/project/models/Project.js";
-import { ApiError } from "../../utils/apierror.js";
-import { asyncHandler } from "../../utils/asyncHandler.js";
-import { logger } from "../../utils/Logger.js";
+import { Project } from "../../modules/project/models/Project.js";
+import { ApiError } from "../../shared/utils/apierror.js";
+import { asyncHandler } from "../../shared/utils/asynchandler.js";
+import { logger } from "../../shared/utils/Logger.js";
 
 /**
  * Middleware to set project_id in session based on user ID
