@@ -1,10 +1,11 @@
 import { asyncHandler } from '../../../shared/utils/asyncHandler.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import { DatabaseService } from '../services/DatabaseService.js';
+import { ApiError } from '../../../shared/utils/apierror.js';
 
 export const createDatabase = asyncHandler(async (req, res) => {
     const { name } = req.body;
-    const projectId = req.params.project_id || req.session?.project_id;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
     const database = await DatabaseService.create({ projectId, name, userId });
@@ -23,17 +24,18 @@ export const createDatabase = asyncHandler(async (req, res) => {
 });
 
 export const deleteDatabase = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { database_id } = req.params;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
-    const database = await DatabaseService.delete({ projectId: id, databaseId: id, userId });
+    const deleted = await DatabaseService.delete({ projectId, databaseId: database_id, userId });
 
     const response = new ApiResponse(
         200,
         {
-            id: database.id,
-            name: database.name,
-            project_id: database.project_id
+            id: deleted.id,
+            name: deleted.name,
+            project_id: deleted.project_id
         },
         'Database deleted successfully'
     );
@@ -42,15 +44,15 @@ export const deleteDatabase = asyncHandler(async (req, res) => {
 });
 
 export const listAllDatabases = asyncHandler(async (req, res) => {
-    const { project_id } = req.params;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
-    const databases = await DatabaseService.listByProject({ projectId: project_id, userId });
+    const databases = await DatabaseService.listByProject({ projectId, userId });
 
     const response = new ApiResponse(
         200,
         {
-            project_id,
+            project_id: projectId,
             total_databases: databases.length,
             databases
         },
