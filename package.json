@@ -5,9 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "jest --coverage",
-    "test:watch": "jest --watch",
-    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
     "migrate": "node -r dotenv/config src/migrations/runner.js up",
     "migrate:down": "node -r dotenv/config src/migrations/runner.js down 1",
