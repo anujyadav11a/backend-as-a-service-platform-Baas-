@@ -3,11 +3,11 @@ import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 
 export class ApiKeyController {
     static async generate(req, res) {
-        const { slug } = req.params;
+        const { projectId } = req.params;
         const { name, permissions = ['read'], environment = 'development' } = req.body;
         const ownerId = req.user.id;
 
-        const apiKeyData = await ApiKeyService.generate(slug, { name, permissions, environment }, ownerId);
+        const apiKeyData = await ApiKeyService.generate(projectId, { name, permissions, environment }, ownerId);
 
         const response = new ApiResponse(
             201,
@@ -19,10 +19,10 @@ export class ApiKeyController {
     }
 
     static async list(req, res) {
-        const { slug } = req.params;
+        const { projectId } = req.params;
         const ownerId = req.user.id;
 
-        const keys = await ApiKeyService.list(slug, ownerId);
+        const keys = await ApiKeyService.list(projectId, ownerId);
 
         const response = new ApiResponse(
             200,
@@ -34,10 +34,10 @@ export class ApiKeyController {
     }
 
     static async revoke(req, res) {
-        const { slug, keyId } = req.params;
+        const { projectId, keyId } = req.params;
         const ownerId = req.user.id;
 
-        await ApiKeyService.revoke(slug, keyId, ownerId);
+        await ApiKeyService.revoke(projectId, keyId, ownerId);
 
         const response = new ApiResponse(
             200,
