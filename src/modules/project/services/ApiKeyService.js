@@ -8,7 +8,7 @@ export class ApiKeyService {
     static async generate(projectSlug, { name, permissions = ['read'], environment = 'development' }, ownerId) {
         logger.info('Generating API key', { projectSlug, name, environment, ownerId });
 
-        const project = await Project.findBySlug(projectSlug);
+        const project = await Project.findByProjectId(projectSlug);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }
@@ -45,7 +45,7 @@ export class ApiKeyService {
     }
 
     static async list(projectSlug, ownerId) {
-        const project = await Project.findBySlug(projectSlug);
+        const project = await Project.findByProjectId(projectSlug);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }
@@ -58,7 +58,7 @@ export class ApiKeyService {
     }
 
     static async revoke(projectSlug, keyId, ownerId) {
-        const project = await Project.findBySlug(projectSlug);
+        const project = await Project.findByProjectId(projectSlug);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }
