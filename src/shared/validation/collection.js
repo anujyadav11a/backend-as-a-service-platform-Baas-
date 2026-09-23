@@ -6,6 +6,7 @@ export const createCollectionSchema = z.object({
   }),
   body: z.object({
     name: z.string().min(1, 'Collection name is required').max(255, 'Collection name must be at most 255 characters'),
+    description: z.string().max(500, 'Description must be at most 500 characters').nullable().optional(),
   }),
 });
 
