@@ -239,7 +239,93 @@
 
 /**
  * @openapi
- * /api/v1/projects/{slug}/apikeys:
+ * /api/v1/projects/{projectId}/config:
+ *   get:
+ *     tags: [Projects]
+ *     summary: Get project configuration (CORS, limits)
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
+ *     responses:
+ *       '200':
+ *         description: Project configuration
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/ProjectConfig'
+ *       '401':
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: Project not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @openapi
+ * /api/v1/projects/{projectId}/config:
+ *   patch:
+ *     tags: [Projects]
+ *     summary: Update project configuration (CORS, limits)
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateProjectConfigRequest'
+ *     responses:
+ *       '200':
+ *         description: Project configuration updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/ProjectConfig'
+ *       '400':
+ *         $ref: '#/components/responses/ValidationError'
+ *       '401':
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '404':
+ *         description: Project not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @openapi
+ * /api/v1/projects/{projectId}/apikeys:
  *   post:
  *     tags: [Projects]
  *     summary: Generate new API key for project
@@ -247,7 +333,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectSlugParam'
+ *       - $ref: '#/components/parameters/projectIdParam'
  *     requestBody:
  *       required: true
  *       content:
@@ -279,7 +365,7 @@
 
 /**
  * @openapi
- * /api/v1/projects/{slug}/apikeys:
+ * /api/v1/projects/{projectId}/apikeys:
  *   get:
  *     tags: [Projects]
  *     summary: List all API keys for project
@@ -287,7 +373,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectSlugParam'
+ *       - $ref: '#/components/parameters/projectIdParam'
  *     responses:
  *       '200':
  *         description: List of API keys (keys are masked)
@@ -311,7 +397,7 @@
 
 /**
  * @openapi
- * /api/v1/projects/{slug}/apikeys/{keyId}:
+ * /api/v1/projects/{projectId}/apikeys/{keyId}:
  *   delete:
  *     tags: [Projects]
  *     summary: Revoke an API key
@@ -319,7 +405,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectSlugParam'
+ *       - $ref: '#/components/parameters/projectIdParam'
  *       - $ref: '#/components/parameters/keyIdParam'
  *     responses:
  *       '200':
