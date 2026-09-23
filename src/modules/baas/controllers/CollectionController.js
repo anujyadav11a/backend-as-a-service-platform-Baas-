@@ -1,16 +1,25 @@
 import { asyncHandler } from '../../../shared/utils/asyncHandler.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import { CollectionService } from '../services/CollectionService.js';
+import { DatabaseService } from '../services/DatabaseService.js';
+import { ApiError } from '../../../shared/utils/apierror.js';
 
 export const createCollection = asyncHandler(async (req, res) => {
     const { name } = req.body;
-    const databaseId = req.params.database_id || req.session?.databaseId;
-    const projectId = req.session?.project_id;
+    const { database_id } = req.params;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
-    const collection = await CollectionService.create({ projectId, databaseId, name, userId });
+    // Verify database belongs to project (defense in depth)
+    const database = await DatabaseService.db.findById(database_id);
+    if (!database) {
+        throw ApiError.notFound('Database not found');
+    }
+    if (database.project_id !== projectId) {
+        throw ApiError.forbidden('Database does not belong to this project');
+    }
 
-    req.session.collectionId = collection.id;
+    const collection = await CollectionService.create({ projectId, databaseId: database_id, name, userId });
 
     const response = new ApiResponse(
         201,
@@ -29,7 +38,7 @@ export const createCollection = asyncHandler(async (req, res) => {
 
 export const deleteCollection = asyncHandler(async (req, res) => {
     const { collection_id } = req.params;
-    const projectId = req.session?.project_id;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
     const collection = await CollectionService.delete({ projectId, collectionId: collection_id, userId });
@@ -49,16 +58,25 @@ export const deleteCollection = asyncHandler(async (req, res) => {
 });
 
 export const listAllCollections = asyncHandler(async (req, res) => {
-    const databaseId = req.session?.databaseId || req.params.databaseId;
-    const projectId = req.session?.project_id;
+    const { database_id } = req.params;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
-    const collections = await CollectionService.listByDatabase({ projectId, databaseId, userId });
+    // Verify database belongs to project (defense in depth)
+    const database = await DatabaseService.db.findById(database_id);
+    if (!database) {
+        throw ApiError.notFound('Database not found');
+    }
+    if (database.project_id !== projectId) {
+        throw ApiError.forbidden('Database does not belong to this project');
+    }
+
+    const collections = await CollectionService.listByDatabase({ projectId, databaseId: database_id, userId });
 
     const response = new ApiResponse(
         200,
         {
-            database_id: databaseId,
+            database_id,
             project_id: projectId,
             total_collections: collections.length,
             collections
