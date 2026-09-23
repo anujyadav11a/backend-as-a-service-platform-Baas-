@@ -1,5 +1,4 @@
 import { getRepositories } from '../repositories/factory.js';
-import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
@@ -83,16 +82,6 @@ export class AttributeService {
       );
     }
 
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
-
     const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
       throw ApiError.notFound('Database not found');
@@ -141,16 +130,6 @@ export class AttributeService {
   static async listByCollection({ projectId, collectionId, userId }) {
     logger.info('Fetching attributes for collection', { collectionId, projectId });
 
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
-
     const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
@@ -175,16 +154,6 @@ export class AttributeService {
 
     if (name === undefined && type === undefined && required === undefined) {
       throw ApiError.badRequest('At least one field (name, type, or required) must be provided for update');
-    }
-
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
     }
 
     const collection = await this.collection.findById(collectionId, projectId);
@@ -252,16 +221,6 @@ export class AttributeService {
 
   static async delete({ projectId, collectionId, attributeId, userId }) {
     logger.info('Deleting attribute', { attributeId, projectId });
-
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
 
     const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
