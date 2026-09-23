@@ -1,5 +1,7 @@
 import { ProjectService } from '../services/ProjectService.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
+import { validate } from '../../../shared/middleware/validate.js';
+import { updateProjectConfigSchema } from '../../../shared/validation/project.js';
 
 export class ProjectController {
     static async create(req, res) {
@@ -28,7 +30,8 @@ export class ProjectController {
 
     static async list(req, res) {
         const ownerId = req.user.id;
-        const projects = await ProjectService.listByOwner(ownerId);
+        const fields = req.query.fields;
+        const projects = await ProjectService.listByOwner(ownerId, fields);
 
         const response = new ApiResponse(
             200,
@@ -110,6 +113,37 @@ export class ProjectController {
             200,
             config,
             'Project SDK configuration retrieved'
+        );
+
+        res.status(response.statuscode).json(response);
+    }
+
+    static async getConfig(req, res) {
+        const { projectId } = req.params;
+        const ownerId = req.user.id;
+
+        const config = await ProjectService.getConfig(projectId, ownerId);
+
+        const response = new ApiResponse(
+            200,
+            config,
+            'Project config retrieved successfully'
+        );
+
+        res.status(response.statuscode).json(response);
+    }
+
+    static async updateConfig(req, res) {
+        const { projectId } = req.params;
+        const configData = req.body;
+        const ownerId = req.user.id;
+
+        const config = await ProjectService.updateConfig(projectId, ownerId, configData);
+
+        const response = new ApiResponse(
+            200,
+            config,
+            'Project config updated successfully'
         );
 
         res.status(response.statuscode).json(response);
