@@ -1,5 +1,4 @@
 import { getRepositories } from '../repositories/factory.js';
-import { Project } from '../../project/models/Project.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
@@ -18,16 +17,6 @@ export class CollectionService {
 
   static async create({ projectId, databaseId, name, userId }) {
     logger.info('Creating new collection', { userId, name, databaseId, projectId });
-
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
 
     const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
@@ -67,16 +56,6 @@ export class CollectionService {
   static async delete({ projectId, collectionId, userId }) {
     logger.info('Deleting collection', { collectionId, projectId, userId });
 
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
-
     const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.notFound('Collection not found');
@@ -107,18 +86,13 @@ export class CollectionService {
     return result.deleted;
   }
 
+  static async findById(collectionId, projectId) {
+    logger.info('Finding collection by ID', { collectionId, projectId });
+    return this.collection.findById(collectionId, projectId);
+  }
+
   static async listByDatabase({ projectId, databaseId, userId }) {
     logger.info('Listing all collections', { databaseId, projectId, userId });
-
-    const project = await Project.findOne({
-      project_id: projectId,
-      owner_id: userId,
-      status: 'active'
-    });
-
-    if (!project) {
-      throw ApiError.forbidden('Project not found or access denied');
-    }
 
     const database = await this.database.findById(databaseId);
     if (!database || database.project_id !== projectId) {
