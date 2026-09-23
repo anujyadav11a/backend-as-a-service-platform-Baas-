@@ -15,7 +15,13 @@ export const createDocumentRepository = (pool) => ({
       [documentId]
     );
 
-    return { created: documentRows[0] };
+    const createdDocument = documentRows[0];
+    return {
+      created: {
+        ...createdDocument,
+        data: JSON.parse(createdDocument.data),
+      },
+    };
   },
 
   async findById(id, projectId) {
@@ -119,7 +125,13 @@ export const createDocumentRepository = (pool) => ({
       [sanitizedDocumentId, sanitizedProjectId]
     );
 
-    return { updated: updatedDocRows[0] };
+    const updatedDocument = updatedDocRows[0];
+    return {
+      updated: {
+        ...updatedDocument,
+        data: JSON.parse(updatedDocument.data),
+      },
+    };
   },
 
   async deleteById(id, projectId) {
