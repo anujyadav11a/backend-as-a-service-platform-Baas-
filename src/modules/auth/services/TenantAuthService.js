@@ -9,7 +9,7 @@ import { generateTenantAccessAndRefreshToken } from '../utils/tenantTokenUtils.j
 import { createTenantSession } from '../utils/tenantSessionUtils.js';
 
 export class TenantAuthService {
-    static async register({ username, email, password, projectId, apiKey }) {
+    static async register({ username, email, password, projectId }) {
         logger.info('Tenant user registration attempt', { email, projectId });
 
         const sanitizedUsername = username.trim();
@@ -17,7 +17,6 @@ export class TenantAuthService {
 
         const project = await Project.findOne({ 
             project_id: projectId, 
-            api_key: apiKey, 
             status: 'active' 
         });
         
@@ -78,7 +77,7 @@ export class TenantAuthService {
         return createdUser;
     }
 
-    static async login({ email, password, projectId, apiKey, req }) {
+    static async login({ email, password, projectId, req }) {
         logger.info('Tenant user login attempt', { 
             email, 
             project_id: projectId,
@@ -90,7 +89,7 @@ export class TenantAuthService {
 
         const project = await Project.findOne({ 
             project_id: projectId, 
-            api_key: apiKey, 
+             
             status: 'active' 
         });
         
@@ -121,7 +120,7 @@ export class TenantAuthService {
             throw ApiError.unauthorized("Invalid email or password");
         }
 
-        const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+        const { accessToken, refreshToken } = await generateTenantAccessAndRefreshToken(user._id);
 
         const session = await createTenantSession(user, req, refreshToken);
 
