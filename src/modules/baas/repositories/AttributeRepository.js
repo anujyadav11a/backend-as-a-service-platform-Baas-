@@ -4,11 +4,11 @@ export const createAttributeRepository = (pool) => ({
     const sanitizedType = type.trim().toUpperCase();
     const sanitizedCollectionId = collectionId.trim();
     const sanitizedProjectId = projectId.trim();
-    const sanitizedDatabaseId = databaseId.trim();
+
 
     const [result] = await pool.promise().execute(
       'INSERT INTO attributes (collection_id, database_id, name, type, required, project_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [sanitizedCollectionId, sanitizedDatabaseId, sanitizedName, sanitizedProjectId, sanitizedType, required ? 1 : 0]
+      [sanitizedCollectionId, databaseId, sanitizedName, sanitizedType, required ? 1 : 0 ,sanitizedProjectId]
     );
 
     const [newAttributeRows] = await pool.promise().execute(
