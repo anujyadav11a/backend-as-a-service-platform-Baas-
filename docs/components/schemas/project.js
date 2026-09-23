@@ -106,5 +106,24 @@ export const projectSchemas = {
     properties: {
       q: { type: 'string', description: 'Search term for project name', example: 'my project' }
     }
+  },
+  ProjectConfig: {
+    type: 'object',
+    required: ['maxDatabases', 'maxTablesPerDb', 'maxDocumentsPerTable', 'corsOrigins'],
+    properties: {
+      maxDatabases: { type: 'integer', minimum: 1, maximum: 50, example: 3 },
+      maxTablesPerDb: { type: 'integer', minimum: 1, maximum: 500, example: 10 },
+      maxDocumentsPerTable: { type: 'integer', minimum: 1, maximum: 100000, example: 1000 },
+      corsOrigins: { type: 'array', items: { type: 'string', format: 'uri' }, example: ['https://app.example.com', '*'] }
+    }
+  },
+  UpdateProjectConfigRequest: {
+    type: 'object',
+    properties: {
+      maxDatabases: { type: 'integer', minimum: 1, maximum: 50, example: 5 },
+      maxTablesPerDb: { type: 'integer', minimum: 1, maximum: 500, example: 20 },
+      maxDocumentsPerTable: { type: 'integer', minimum: 1, maximum: 100000, example: 5000 },
+      corsOrigins: { type: 'array', items: { type: 'string', format: 'uri' }, example: ['https://app.example.com', 'https://admin.example.com'] }
+    }
   }
 };
