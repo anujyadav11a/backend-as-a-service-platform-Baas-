@@ -1,9 +1,9 @@
 import { AuthService } from '../services/AuthService.js';
+import { ConsoleSession } from '../models/ConsoleSession.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import * as cookieUtils from '../../../shared/utils/cookieUtils.js';
 import { logger } from '../../../shared/utils/Logger.js';
-  
-console.log('cookieUtils keys:', Object.keys(cookieUtils));
+import { ApiError } from '../../../shared/utils/apierror.js';
 
 export class AuthController {
     static async register(req, res) {
@@ -71,6 +71,25 @@ export class AuthController {
         const sessions = await AuthService.getSessions(userId);
 
         const response = new ApiResponse(200, sessions, "Sessions retrieved successfully");
+        return res.status(response.statuscode).json(response);
+    }
+
+    static async getMe(req, res) {
+        const userId = req.user?._id || req.user?.id;
+        
+        // Check for active session
+        const session = await ConsoleSession.findOne({
+            user_id: userId,
+            is_active: true,
+            expires_at: { $gt: new Date() }
+        });
+
+        if (!session) {
+            const response = new ApiResponse(401, null, "Session expired or invalid", false);
+            return res.status(response.statuscode).json(response);
+        }
+
+        const response = new ApiResponse(200, req.user, "User retrieved successfully");
         return res.status(response.statuscode).json(response);
     }
 
