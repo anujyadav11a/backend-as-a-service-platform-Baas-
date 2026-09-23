@@ -15,6 +15,7 @@ import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler.
 import { refreshTokenMiddleware } from './shared/middleware/auth.middleware.js';
 import { tenantRefreshTokenMiddleware } from './middleware/tenantAuth.middleware.js';
 import { sessionMiddleware } from './middleware/googleauthsession.middleware.js';
+
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocumnet from '../docs/swagger.js';
 
@@ -24,9 +25,17 @@ const app = express();
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocumnet));
 
 const Options={
-    origin:process.env.CORS_ORIGIN,
+    origin:true,
     credentials:true,
-    allowedHeaders:"*"
+
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", 
+
+            
+    ],
+    allowedHeaders: ["Content-Type",
+  "Authorization",
+  "project-id",
+  "api-key",],
 }
 
 // Request logging middleware
@@ -51,9 +60,10 @@ app.use('/auth', googleOAuthRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tenantuser', tenantUserroute)
-app.use('/api/v1/database',databaseRouter);
-app.use('/api/v1/collection', collectionRouter);
-app.use('/api/v1/attributes', attributeRouter);
+// BAAS routes with project-level authorization (routes include /projects/ prefix)
+app.use('/api/v1', databaseRouter);
+app.use('/api/v1', collectionRouter);
+app.use('/api/v1', attributeRouter);
 // 404 handler
 app.use(notFoundHandler);
 
