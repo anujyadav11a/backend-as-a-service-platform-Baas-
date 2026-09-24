@@ -18,11 +18,12 @@ export const authSchemas = {
   },
   TenantRegisterRequest: {
     type: 'object',
-    required: ['email', 'password', 'name'],
+    required: ['username', 'email', 'password'],
     properties: {
+      username: { type: 'string', minLength: 1, maxLength: 100, example: 'Jane Doe' },
       email: { type: 'string', format: 'email', example: 'tenant@example.com' },
-      password: { type: 'string', format: 'password', minLength: 8, example: 'securePassword123' },
-      name: { type: 'string', minLength: 1, maxLength: 100, example: 'Jane Doe' }
+      password: { type: 'string', format: 'password', minLength: 8, example: 'securePassword123' }
+      
     }
   },
   TenantLoginRequest: {

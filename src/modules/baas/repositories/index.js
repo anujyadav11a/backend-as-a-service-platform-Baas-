@@ -1,4 +1,4 @@
-export { DatabaseRepository } from "./DatabaseRepository.js";
-export { CollectionRepository } from "./CollectionRepository.js";
-export { AttributeRepository } from "./AttributeRepository.js";
-export { DocumentRepository } from "./DocumentRepository.js";
+export { createDatabaseRepository } from "./DatabaseRepository.js";
+export { createCollectionRepository } from "./CollectionRepository.js";
+export { createAttributeRepository } from "./AttributeRepository.js";
+export { createDocumentRepository } from "./DocumentRepository.js";

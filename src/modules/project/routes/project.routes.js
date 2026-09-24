@@ -10,10 +10,11 @@ import {
     getProjectSchema, 
     searchProjectsSchema,
     generateApiKeySchema,
-    deleteProjectSchema 
+    deleteProjectSchema,
+    updateProjectConfigSchema
 } from '../../../shared/validation/project.js';
 
-const router = express.Router();
+const router = express.Router();+
 
 // Project CRUD routes
 router.post('/create', authMiddleware, validate(createProjectSchema), ProjectController.create);
@@ -25,8 +26,12 @@ router.delete('/:projectId', authMiddleware, validate(deleteProjectSchema), Proj
 router.get('/:projectId/sdk', authMiddleware, cacheMiddleware('sdk-details'), ProjectController.getSDKConfig);
 
 // API Key routes
-router.post('/:slug/apikeys', authMiddleware, validate(generateApiKeySchema), ApiKeyController.generate);
-router.get('/:slug/apikeys', authMiddleware, ApiKeyController.list);
-router.delete('/:slug/apikeys/:keyId', authMiddleware, ApiKeyController.revoke);
+router.post('/:projectId/apikeys', authMiddleware, validate(generateApiKeySchema), ApiKeyController.generate);
+router.get('/:projectId/apikeys', authMiddleware, ApiKeyController.list);
+router.delete('/:projectId/apikeys/:keyId', authMiddleware, ApiKeyController.revoke);
+
+// Project Config routes
+router.get('/:projectId/config', authMiddleware, ProjectController.getConfig);
+router.patch('/:projectId/config', authMiddleware, validate(updateProjectConfigSchema), ProjectController.updateConfig);
 
 export default router;

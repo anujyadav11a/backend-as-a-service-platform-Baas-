@@ -5,7 +5,9 @@ import { invalidateCache } from '../../../shared/utils/cacheInvalidation.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { ProjectEvents } from '../../../shared/events/projectEvents.js';
 import { SagaRunner } from '../../../shared/utils/sagaRunner.js';
-import { DatabaseService } from '../../baas/services/DatabaseService.js';
+import { createDeleteDatabasesStep, createSoftDeleteProjectStep } from '../utils/projectSagaUtils.js';
+import config from '../../../shared/config/env.js';
+import mongoose from 'mongoose';
 
 export class ProjectService {
     static async create({ name, description, ownerId }) {
@@ -59,15 +61,16 @@ export class ProjectService {
                 throw err;
             }
         }
-
-        throw ApiError.conflict('Unable to allocate unique project_id');
     }
 
-    static async listByOwner(ownerId) {
+    static async listByOwner(ownerId, fields = '') {
         logger.info('Fetching user projects', { ownerId });
 
+        const selectFields = 'name description project_id api_key status usage_stats createdAt updatedAt';
+        const includeConfig = fields?.split(',').includes('config');
+        
         const projects = await Project.findByOwner(ownerId)
-            .select('name description project_id api_key status usage_stats createdAt updatedAt')
+            .select(includeConfig ? selectFields + ' config' : selectFields)
             .sort({ updatedAt: -1 });
 
         return projects.map(project => ({
@@ -76,8 +79,9 @@ export class ProjectService {
             name: project.name,
             description: project.description,
             api_key: project.api_key,
-            api_endpoint: `${process.env.API_BASE_URL || 'http://localhost:8000'}/api/v1/${project.project_id}`,
+            api_endpoint: `${config.api.baseUrl}/api/v1/${project.project_id}`,
             status: project.status,
+            ...(includeConfig && { config: project.config }),
             usage: {
                 api_requests: project.usage_stats.api_requests_count,
                 storage_mb: project.usage_stats.storage_used_mb
@@ -90,14 +94,15 @@ export class ProjectService {
     static async getById(projectId, ownerId) {
         logger.info('Fetching project details', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -124,14 +129,15 @@ export class ProjectService {
     static async update(projectId, ownerId, { name, description }) {
         logger.info('Updating project', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -181,17 +187,62 @@ export class ProjectService {
         };
     }
 
+    static async updateConfig(projectId, ownerId, configData) {
+        logger.info('Updating project config', { projectId, ownerId, configData });
+
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
+
+        if (!project) {
+            throw ApiError.notFound('Project not found');
+        }
+
+        // Merge config (preserve unspecified fields)
+        project.config = {
+            ...project.config,
+            ...configData
+        };
+
+        await project.save();
+
+        // Invalidate related caches
+        await invalidateCache([
+            'project-list:' + ownerId,
+            'project:' + projectId,
+            'sdk-details:' + ownerId
+        ]);
+
+        logger.info('Project config updated successfully', { projectId: project._id, ownerId });
+
+        // Emit domain event
+        eventBus.emit(ProjectEvents.PROJECT_UPDATED, {
+            projectId: project._id,
+            project_id: project.project_id,
+            changedFields: { config: configData }
+        });
+
+        return project.config;
+    }
+
     static async delete(projectId, ownerId) {
         logger.info('Deleting project with cascade', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: { $ne: 'deleted' }
-        });
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query);
 
         if (!project) {
             throw ApiError.notFound('Project not found');
@@ -200,40 +251,10 @@ export class ProjectService {
         const projectIdStr = project.project_id;
         const projectMongoId = project._id;
 
-        // Define saga steps
+        // Define saga steps using extracted utilities
         const sagaSteps = [
-            {
-                name: 'delete-all-databases',
-                execute: async (context) => {
-                    await DatabaseService.deleteAllForProject({ 
-                        projectId: projectIdStr, 
-                        userId: ownerId 
-                    });
-                    context.databasesDeleted = true;
-                },
-                compensate: async (context) => {
-                    // Databases are soft-deleted in MySQL, compensation would require manual intervention
-                    logger.warn('Compensation: databases were deleted, manual recovery may be needed', { 
-                        projectId: projectIdStr 
-                    });
-                }
-            },
-            {
-                name: 'soft-delete-project',
-                execute: async () => {
-                    project.status = 'deleted';
-                    await project.save();
-                },
-                compensate: async () => {
-                    // Re-activate project if needed
-                    const proj = await Project.findById(projectMongoId);
-                    if (proj && proj.status === 'deleted') {
-                        proj.status = 'active';
-                        await proj.save();
-                        logger.info('Compensation: project re-activated', { projectId: projectIdStr });
-                    }
-                }
-            }
+            createDeleteDatabasesStep(projectIdStr, ownerId),
+            createSoftDeleteProjectStep(projectMongoId, projectIdStr)
         ];
 
         try {
@@ -300,14 +321,15 @@ export class ProjectService {
     static async getSDKConfig(projectId, ownerId) {
         logger.info('Fetching project for SDK config', { projectId, ownerId });
 
-        const project = await Project.findOne({
-            $or: [
-                { _id: projectId },
-                { project_id: projectId }
-            ],
-            owner_id: ownerId,
-            status: 'active'
-        }).select('project_id api_key name status');
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = 'active';
+
+        const project = await Project.findOne(query).select('project_id api_key name status');
 
         if (!project) {
             throw ApiError.notFound('Project not found or inactive');
@@ -316,8 +338,40 @@ export class ProjectService {
         return {
             project_id: project.project_id,
             api_key: project.api_key,
-            api_endpoint: `${process.env.API_BASE_URL || 'http://localhost:8000'}/api/v1/${project.project_id}`,
+            api_endpoint: `${config.api.baseUrl}/api/v1/${project.project_id}`,
             project_name: project.name
         };
+    }
+
+    static async getConfig(projectId, ownerId) {
+        logger.info('Fetching project config', { projectId, ownerId });
+
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        
+        query.owner_id = ownerId;
+        query.status = { $ne: 'deleted' };
+
+        const project = await Project.findOne(query).select('config');
+
+        if (!project) {
+            throw ApiError.notFound('Project not found');
+        }
+
+        return project.config;
+    }
+
+    static async userHasAccess(userId, projectId) {
+        logger.info('Checking user project access', { userId, projectId });
+
+        const project = await Project.findOne({
+            project_id: projectId,
+            owner_id: userId,
+            status: 'active'
+        }).select('_id');
+
+        return !!project;
     }
 }

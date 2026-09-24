@@ -1,8 +1,4 @@
-import { DocumentRepository } from '../repositories/DocumentRepository.js';
-import { AttributeRepository } from '../repositories/AttributeRepository.js';
-import { CollectionRepository } from '../repositories/CollectionRepository.js';
-import { DatabaseRepository } from '../repositories/DatabaseRepository.js';
-import { Project } from '../../project/models/Project.js';
+import { getRepositories } from '../repositories/factory.js';
 import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
@@ -120,37 +116,33 @@ function generateDocumentId() {
   return 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
 }
 
-function getProjectIdFromContext(context) {
-  if (context.authType === 'apiKey' && context.project) {
-    return context.project._id || context.project.id;
-  }
-  if (context.projectId) {
-    return context.projectId;
-  }
-  throw ApiError.badRequest('Project ID is required');
-}
-
-function getCollectionIdFromContext(context) {
-  if (context.collectionId) {
-    return context.collectionId;
-  }
-  throw ApiError.badRequest('Collection ID is required');
-}
-
 export class DocumentService {
+  static generateDocumentId() {
+    return generateDocumentId();
+  }
+
+  static get document() {
+    return getRepositories().document;
+  }
+
+  static get attribute() {
+    return getRepositories().attribute;
+  }
+
+  static get collection() {
+    return getRepositories().collection;
+  }
+
   static async create({ collectionId, projectId, data, authType, project }) {
     logger.info('Adding new document to collection', {
       collectionId, projectId, dataKeys: data ? Object.keys(data) : [], authType
     });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw ApiError.badRequest('Data must be a valid JSON object');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionId, projectId);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection. Please define the schema first.');
     }
@@ -162,9 +154,9 @@ export class DocumentService {
 
     const documentId = generateDocumentId();
 
-    const result = await DocumentRepository.create({
-      projectId: projectIdToUse,
-      collectionId: collectionIdToUse,
+    const result = await this.document.create({
+      projectId,
+      collectionId,
       data
     });
 
@@ -174,14 +166,14 @@ export class DocumentService {
 
     logger.info('Document added successfully', {
       documentId: result.created.id,
-      collectionId: collectionIdToUse,
-      projectId: projectIdToUse
+      collectionId,
+      projectId
     });
 
     eventBus.emit(BaaSEvents.DOCUMENT_INSERTED, {
       documentId: result.created.id,
-      collectionId: collectionIdToUse,
-      projectId: projectIdToUse,
+      collectionId,
+      projectId,
       dataKeys: Object.keys(data),
       authType
     });
@@ -192,16 +184,13 @@ export class DocumentService {
   static async list({ collectionId, projectId, page = 1, limit = 10, authType, project }) {
     logger.info('Retrieving documents from collection', { collectionId, projectId, page, limit, authType });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
-    const collection = await CollectionRepository.findById(collectionIdToUse, projectIdToUse);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.badRequest('Invalid collection_id or project_id reference');
     }
 
-    const documents = await DocumentRepository.findByCollectionId(collectionIdToUse, projectIdToUse, { page, limit });
-    const totalDocuments = await DocumentRepository.countByCollectionId(collectionIdToUse, projectIdToUse);
+    const documents = await this.document.findByCollectionId(collectionId, projectId, { page, limit });
+    const totalDocuments = await this.document.countByCollectionId(collectionId, projectId);
     const totalPages = Math.ceil(totalDocuments / limit);
 
     return {
@@ -219,15 +208,12 @@ export class DocumentService {
   static async query({ collectionId, projectId, filters = [], sort, page = 1, limit = 10, authType, project }) {
     logger.info('Querying documents with filters', { collectionId, projectId, filterCount: filters.length, page, limit, authType });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
-    const collection = await CollectionRepository.findById(collectionIdToUse, projectIdToUse);
+    const collection = await this.collection.findById(collectionId, projectId);
     if (!collection) {
       throw ApiError.badRequest('Invalid collection_id or project_id reference');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionId, projectId);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection');
     }
@@ -235,7 +221,7 @@ export class DocumentService {
     const attributeMap = new Map(attributes.map(attr => [attr.name, attr.type]));
     const filterConditions = buildFilterConditions(filters, attributeMap);
 
-    const allDocuments = await DocumentRepository.findAllByCollectionId(collectionIdToUse, projectIdToUse);
+    const allDocuments = await this.document.findAllByCollectionId(collectionId, projectId);
     let filteredDocuments = allDocuments.map(doc => ({
       id: doc.id,
       collection_id: doc.collection_id,
@@ -276,8 +262,8 @@ export class DocumentService {
     const paginatedDocuments = filteredDocuments.slice(offset, offset + limit);
 
     logger.info('Documents queried successfully', {
-      collectionId: collectionIdToUse,
-      projectId: projectIdToUse,
+      collectionId,
+      projectId,
       totalMatched: totalDocuments,
       returned: paginatedDocuments.length
     });
@@ -297,34 +283,28 @@ export class DocumentService {
   static async getById({ collectionId, projectId, documentId, authType, project }) {
     logger.info('Retrieving document by ID', { documentId, collectionId, projectId, authType });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
-    const document = await DocumentRepository.findById(documentId, projectIdToUse);
+    const document = await this.document.findById(documentId, projectId);
     if (!document) {
       throw ApiError.notFound('Document not found');
     }
 
-    logger.info('Document retrieved successfully', { documentId, projectId: projectIdToUse });
+    logger.info('Document retrieved successfully', { documentId, projectId });
     return document;
   }
 
   static async update({ collectionId, projectId, documentId, data, authType, project }) {
     logger.info('Updating document', { documentId, collectionId, projectId, dataKeys: data ? Object.keys(data) : [], authType });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw ApiError.badRequest('Data must be a valid JSON object');
     }
 
-    const existingDoc = await DocumentRepository.findById(documentId, projectIdToUse);
+    const existingDoc = await this.document.findById(documentId, projectId);
     if (!existingDoc) {
       throw ApiError.notFound('Document not found');
     }
 
-    const attributes = await AttributeRepository.findByCollectionId(collectionIdToUse, projectIdToUse);
+    const attributes = await this.attribute.findByCollectionId(collectionId, projectId);
     if (attributes.length === 0) {
       throw ApiError.badRequest('No attributes found for this collection');
     }
@@ -334,17 +314,17 @@ export class DocumentService {
       throw ApiError.badRequest(`Data validation failed: ${validationResult.errors.join(', ')}`);
     }
 
-    const result = await DocumentRepository.updateById(documentId, projectIdToUse, data);
+    const result = await this.document.updateById(documentId, projectId, data);
     if (result.notFound) {
       throw ApiError.notFound('Document not found or no changes made');
     }
 
-    logger.info('Document updated successfully', { documentId, projectId: projectIdToUse });
+    logger.info('Document updated successfully', { documentId, projectId });
 
     eventBus.emit(BaaSEvents.DOCUMENT_UPDATED, {
       documentId,
-      collectionId: collectionIdToUse,
-      projectId: projectIdToUse,
+      collectionId,
+      projectId,
       dataKeys: Object.keys(data),
       authType
     });
@@ -355,20 +335,17 @@ export class DocumentService {
   static async delete({ collectionId, projectId, documentId, authType, project }) {
     logger.info('Deleting document', { documentId, collectionId, projectId, authType });
 
-    const projectIdToUse = getProjectIdFromContext({ authType, project, projectId });
-    const collectionIdToUse = getCollectionIdFromContext({ collectionId });
-
-    const result = await DocumentRepository.deleteById(documentId, projectIdToUse);
+    const result = await this.document.deleteById(documentId, projectId);
     if (result.notFound) {
       throw ApiError.notFound('Document not found');
     }
 
-    logger.info('Document deleted successfully', { documentId, projectId: projectIdToUse });
+    logger.info('Document deleted successfully', { documentId, projectId });
 
     eventBus.emit(BaaSEvents.DOCUMENT_DELETED, {
       documentId,
-      collectionId: collectionIdToUse,
-      projectId: projectIdToUse,
+      collectionId,
+      projectId,
       authType
     });
 
@@ -378,7 +355,7 @@ export class DocumentService {
   static async deleteAllForCollection({ collectionId, projectId, userId }) {
     logger.info('Deleting all documents for collection', { collectionId, projectId, userId });
 
-    const result = await DocumentRepository.deleteAllByCollectionId(collectionId, projectId);
+    const result = await this.document.deleteAllByCollectionId(collectionId, projectId);
 
     logger.info('All documents deleted for collection', { collectionId, projectId, deletedCount: result.deletedCount, userId });
     

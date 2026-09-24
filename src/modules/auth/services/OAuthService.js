@@ -10,12 +10,13 @@ import { ValidationHelper } from '../../../shared/utils/validate.js';
 import { setAuthCookies } from '../../../shared/utils/cookieUtils.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { AuthEvents } from '../../../shared/events/authEvents.js';
+import config from '../../../shared/config/env.js';
 
 export class OAuthService {
     constructor() {
-        this.clientId = process.env.GOOGLE_CLIENT_ID;
-        this.clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-        this.redirectUri = process.env.GOOGLE_REDIRECT_URI;
+        this.clientId = config.google.clientId;
+        this.clientSecret = config.google.clientSecret;
+        this.redirectUri = config.google.redirectUri;
         this.tokenEndpoint = 'https://oauth2.googleapis.com/token';
         this.userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
         this.authEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';

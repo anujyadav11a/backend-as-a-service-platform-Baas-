@@ -33,7 +33,7 @@ export const searchProjectsSchema = z.object({
 
 export const generateApiKeySchema = z.object({
   params: z.object({
-    slug: z.string().min(1, 'Project slug is required'),
+    projectId: z.string().min(1, 'Project ID is required'),
   }),
   body: z.object({
     name: z.string().min(1, 'API key name is required').max(100, 'API key name must be at most 100 characters'),
@@ -45,5 +45,19 @@ export const generateApiKeySchema = z.object({
 export const deleteProjectSchema = z.object({
   params: z.object({
     projectId: z.string().min(1, 'Project ID is required'),
+  }),
+});
+
+export const updateProjectConfigSchema = z.object({
+  params: z.object({
+    projectId: z.string().min(1, 'Project ID is required'),
+  }),
+  body: z.object({
+    max_databases: z.number().int().min(1).max(50).optional(),
+    max_tables_per_db: z.number().int().min(1).max(500).optional(),
+    max_documents_per_table: z.number().int().min(1).max(100000).optional(),
+    cors_origins: z.array(z.string().url().or(z.literal('*'))).optional(),
+  }).refine(data => Object.keys(data).length > 0, {
+    message: 'At least one config field must be provided',
   }),
 });

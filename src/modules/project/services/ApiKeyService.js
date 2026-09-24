@@ -3,12 +3,21 @@ import { ApiError } from '../../../shared/utils/apierror.js';
 import { logger } from '../../../shared/utils/Logger.js';
 import { eventBus } from '../../../shared/events/EventBus.js';
 import { ProjectEvents } from '../../../shared/events/projectEvents.js';
+import mongoose from 'mongoose';
 
 export class ApiKeyService {
-    static async generate(projectSlug, { name, permissions = ['read'], environment = 'development' }, ownerId) {
-        logger.info('Generating API key', { projectSlug, name, environment, ownerId });
+    static async findProjectById(projectId) {
+        const isObjectId = mongoose.Types.ObjectId.isValid(projectId);
+        const query = isObjectId
+            ? { _id: projectId }
+            : { project_id: projectId };
+        return Project.findOne({ ...query, status: 'active' });
+    }
 
-        const project = await Project.findBySlug(projectSlug);
+    static async generate(projectId, { name, permissions = ['read'], environment = 'development' }, ownerId) {
+        logger.info('Generating API key', { projectId, name, environment, ownerId });
+
+        const project = await this.findProjectById(projectId);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }
@@ -44,8 +53,8 @@ export class ApiKeyService {
         };
     }
 
-    static async list(projectSlug, ownerId) {
-        const project = await Project.findBySlug(projectSlug);
+    static async list(projectId, ownerId) {
+        const project = await this.findProjectById(projectId);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }
@@ -57,8 +66,8 @@ export class ApiKeyService {
         return project.api_keys || [];
     }
 
-    static async revoke(projectSlug, keyId, ownerId) {
-        const project = await Project.findBySlug(projectSlug);
+    static async revoke(projectId, keyId, ownerId) {
+        const project = await this.findProjectById(projectId);
         if (!project) {
             throw ApiError.notFound('Project not found');
         }

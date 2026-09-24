@@ -2,9 +2,9 @@ export const parameters = {
   projectIdParam: {
     name: 'projectId',
     in: 'path',
-    description: 'Project ID (e.g., proj_abc123)',
+    description: 'Project ID (e.g., 3e5aabc5 or MongoDB ObjectId)',
     required: true,
-    schema: { type: 'string', pattern: '^proj_[a-zA-Z0-9]+$' }
+    schema: { type: 'string', minLength: 1 }
   },
   projectSlugParam: {
     name: 'slug',
@@ -70,11 +70,11 @@ export const parameters = {
     schema: { type: 'integer', minimum: 1, maximum: 100, default: 10 }
   },
   searchQuery: {
-    name: 'q',
+    name: 'query',
     in: 'query',
     description: 'Search term',
-    required: false,
-    schema: { type: 'string' }
+    required: true,
+    schema: { type: 'string', minLength: 1 }
   },
   keyIdParam: {
     name: 'keyId',

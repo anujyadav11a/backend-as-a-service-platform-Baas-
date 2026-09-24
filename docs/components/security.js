@@ -8,7 +8,7 @@ export const securitySchemes = {
   apiKeyAuth: {
     type: 'apiKey',
     in: 'header',
-    name: 'X-API-Key',
+    name: 'api-key',
     description: 'Project API Key for tenant/document operations. Obtain from Project SDK details or API Keys tab.'
   },
   cookieAuth: {
@@ -16,5 +16,11 @@ export const securitySchemes = {
     in: 'cookie',
     name: 'accessToken',
     description: 'HTTP-only cookie set on login. Used for browser-based console sessions.'
+  },
+  projectId:{
+    type: 'project-id',
+    in: 'header',
+    name: 'project-id',
+    description: 'Project ID for tenant/document operations. Obtain from Project SDK details or API Keys tab.'
   }
 };

@@ -2,42 +2,18 @@ import { asyncHandler } from '../../../shared/utils/asyncHandler.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import { DocumentService } from '../services/DocumentService.js';
 
-function getProjectIdFromRequest(req) {
-    if (req.project && (req.project._id || req.project.id)) {
-        return req.project._id || req.project.id;
-    }
-    if (req.headers.project_id) {
-        return req.headers.project_id;
-    }
-    if (req.body?.project_id) {
-        return req.body.project_id;
-    }
-    return null;
-}
-
-function getCollectionIdFromRequest(req) {
-    if (req.params.collection_id) {
-        return req.params.collection_id;
-    }
-    if (req.body?.collection_id) {
-        return req.body.collection_id;
-    }
-    return null;
-}
-
 export const addDocument = asyncHandler(async (req, res) => {
     const { data } = req.body;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const { collection_id } = req.params;
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     const document = await DocumentService.create({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         data,
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(
@@ -57,18 +33,17 @@ export const addDocument = asyncHandler(async (req, res) => {
 
 export const getDocuments = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const { collection_id } = req.params;
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     const result = await DocumentService.list({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         page: parseInt(page),
         limit: parseInt(limit),
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(
@@ -85,20 +60,19 @@ export const getDocuments = asyncHandler(async (req, res) => {
 
 export const queryDocuments = asyncHandler(async (req, res) => {
     const { filters = [], sort, page = 1, limit = 10 } = req.body;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const { collection_id } = req.params;
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     const result = await DocumentService.query({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         filters,
         sort,
         page: parseInt(page),
         limit: parseInt(limit),
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(
@@ -114,18 +88,16 @@ export const queryDocuments = asyncHandler(async (req, res) => {
 });
 
 export const getDocumentById = asyncHandler(async (req, res) => {
-    const { document_id } = req.params;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const { document_id, collection_id } = req.params;
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     const document = await DocumentService.getById({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         documentId: document_id,
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(
@@ -144,20 +116,18 @@ export const getDocumentById = asyncHandler(async (req, res) => {
 });
 
 export const updateDocument = asyncHandler(async (req, res) => {
-    const { document_id } = req.params;
+    const { document_id, collection_id } = req.params;
     const { data } = req.body;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     const document = await DocumentService.update({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         documentId: document_id,
         data,
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(
@@ -176,18 +146,16 @@ export const updateDocument = asyncHandler(async (req, res) => {
 });
 
 export const deleteDocument = asyncHandler(async (req, res) => {
-    const { document_id } = req.params;
-    const collectionId = getCollectionIdFromRequest(req);
-    const projectId = getProjectIdFromRequest(req);
+    const { document_id, collection_id } = req.params;
+    const projectId = req.projectId;
     const authType = req.apiKey ? 'API_KEY' : 'SESSION';
-    const project = req.project;
 
     await DocumentService.delete({
-        collectionId,
+        collectionId: collection_id,
         projectId,
         documentId: document_id,
         authType,
-        project
+        project: { project_id: projectId }
     });
 
     const response = new ApiResponse(

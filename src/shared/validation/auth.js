@@ -28,7 +28,6 @@ export const logoutSchema = z.object({
 export const tenantRegisterSchema = z.object({
   headers: z.object({
     'project-id': z.string().min(1, 'Project ID is required'),
-    'api-key': z.string().min(1, 'API Key is required'),
   }).passthrough(),
   body: z.object({
     username: z.string().min(3, 'Username must be at least 3 characters').max(30, 'Username must be at most 30 characters'),
@@ -40,7 +39,7 @@ export const tenantRegisterSchema = z.object({
 export const tenantLoginSchema = z.object({
   headers: z.object({
     'project-id': z.string().min(1, 'Project ID is required'),
-    'api-key': z.string().min(1, 'API Key is required'),
+    
   }).passthrough(),
   body: z.object({
     email: z.string().email('Invalid email format'),

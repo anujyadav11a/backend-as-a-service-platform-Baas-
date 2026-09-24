@@ -1,13 +1,21 @@
 import { asyncHandler } from '../../../shared/utils/asyncHandler.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
 import { AttributeService } from '../services/AttributeService.js';
+import { CollectionService } from '../services/CollectionService.js';
+import { ApiError } from '../../../shared/utils/apierror.js';
 
 export const addColumn = asyncHandler(async (req, res) => {
     const { name, type, required = false } = req.body;
     const { collection_id } = req.params;
-    const projectId = req.session?.project_id;
-    const databaseId = req.session?.databaseId;
+    const projectId = req.projectId;
     const userId = req.user?.id;
+
+    // Verify collection belongs to project (defense in depth)
+    const collection = await CollectionService.findById( collection_id,projectId );
+    if (!collection) {
+        throw ApiError.notFound('Collection not found');
+    }
+    const databaseId = collection.database_id;
 
     const attribute = await AttributeService.create({
         projectId,
@@ -37,7 +45,7 @@ export const addColumn = asyncHandler(async (req, res) => {
 
 export const listAttributes = asyncHandler(async (req, res) => {
     const { collection_id } = req.params;
-    const projectId = req.session?.project_id;
+    const projectId = req.projectId;
     const userId = req.user?.id;
 
     const attributes = await AttributeService.listByCollection({
@@ -61,7 +69,7 @@ export const listAttributes = asyncHandler(async (req, res) => {
 export const updateAttribute = asyncHandler(async (req, res) => {
     const { attribute_id } = req.params;
     const { name, type, required } = req.body;
-    const projectId = req.session?.project_id;
+    const projectId = req.projectId;
     const collectionId = req.params.collection_id;
     const userId = req.user?.id;
 
@@ -96,7 +104,7 @@ export const updateAttribute = asyncHandler(async (req, res) => {
 export const deleteAttribute = asyncHandler(async (req, res) => {
     const { attribute_id } = req.params;
     const { confirm } = req.body;
-    const projectId = req.session?.project_id;
+    const projectId = req.projectId;
     const collectionId = req.params.collection_id;
     const userId = req.user?.id;
 

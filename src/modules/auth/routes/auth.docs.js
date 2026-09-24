@@ -196,10 +196,12 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/register:
+ * /api/v1/tenantuser/tenantRegister:
  *   post:
  *     tags: [Auth]
  *     summary: Register a new tenant user
+ *     security:
+ *       - projectId: []
  *     requestBody:
  *       required: true
  *       content:
@@ -225,10 +227,12 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/login:
+ * /api/v1/tenantuser/tenantlogin:
  *   post:
  *     tags: [Auth]
  *     summary: Login tenant user
+ *     security:
+ *       - projectId: []
  *     requestBody:
  *       required: true
  *       content:
@@ -261,7 +265,7 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/logout:
+ * /api/v1/tenantuser/tenantlogout:
  *   post:
  *     tags: [Auth]
  *     summary: Logout tenant user
@@ -284,7 +288,7 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/sessions:
+ * /api/v1/tenantuser/getTenantsessions:
  *   get:
  *     tags: [Auth]
  *     summary: Get all active sessions for tenant user
@@ -314,7 +318,7 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/sessions/{sessionId}:
+ * /api/v1/tenantuser/revokeSession/{sessionId}:
  *   delete:
  *     tags: [Auth]
  *     summary: Revoke a specific tenant session
@@ -345,7 +349,7 @@
 
 /**
  * @openapi
- * /api/v1/users/tenant/me:
+ * /api/v1/tenantuser/getCurrentUser:
  *   get:
  *     tags: [Auth]
  *     summary: Get current tenant user profile

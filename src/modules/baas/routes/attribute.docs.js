@@ -1,6 +1,6 @@
 /**
  * @openapi
- * /api/v1/attributes/{collection_id}/attributes:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/attributes:
  *   post:
  *     tags: [Attributes]
  *     summary: Add a new attribute (column) to a collection
@@ -17,6 +17,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     requestBody:
  *       required: true
@@ -46,6 +47,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Collection not found
  *         content:
@@ -62,7 +69,7 @@
 
 /**
  * @openapi
- * /api/v1/attributes/{collection_id}/attributes:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/attributes:
  *   get:
  *     tags: [Attributes]
  *     summary: List all attributes for a collection
@@ -70,6 +77,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     responses:
  *       '200':
@@ -84,6 +92,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Collection not found
  *         content:
@@ -94,7 +108,7 @@
 
 /**
  * @openapi
- * /api/v1/attributes/{collection_id}/attributes/{attribute_id}:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/attributes/{attribute_id}:
  *   put:
  *     tags: [Attributes]
  *     summary: Update an attribute
@@ -105,6 +119,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/attributeIdParam'
  *     requestBody:
@@ -135,6 +150,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Collection or attribute not found
  *         content:
@@ -145,7 +166,7 @@
 
 /**
  * @openapi
- * /api/v1/attributes/{collection_id}/attributes/{attribute_id}:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/attributes/{attribute_id}:
  *   delete:
  *     tags: [Attributes]
  *     summary: Delete an attribute
@@ -156,6 +177,7 @@
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParam'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/attributeIdParam'
  *     responses:
@@ -167,6 +189,12 @@
  *               $ref: '#/components/schemas/SuccessResponse'
  *       '401':
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
  *         content:
  *           application/json:
  *             schema:

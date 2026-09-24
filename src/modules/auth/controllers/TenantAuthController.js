@@ -6,14 +6,14 @@ export class TenantAuthController {
     static async register(req, res) {
         const { username, email, password } = req.body;
         const projectId = req.headers['project-id'] || req.headers['x-frontier-project-id'];
-        const apiKey = req.headers['api-key'] || req.headers['x-frontier-api-key'];
+        
 
         const user = await TenantAuthService.register({ 
             username, 
             email, 
             password, 
             projectId, 
-            apiKey 
+            
         });
 
         const response = new ApiResponse(201, user, "User registered successfully");
@@ -23,13 +23,12 @@ export class TenantAuthController {
     static async login(req, res) {
         const { email, password } = req.body;
         const projectId = req.headers['project-id'] || req.headers['x-frontier-project-id'];
-        const apiKey = req.headers['api-key'] || req.headers['x-frontier-api-key'];
+        
 
         const result = await TenantAuthService.login({ 
             email, 
             password, 
             projectId, 
-            apiKey,
             req 
         });
 
