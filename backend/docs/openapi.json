@@ -1,0 +1,5070 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "BaaS Platform API",
+    "version": "1.0.0",
+    "description": "Backend as a Service Platform - Complete API Reference",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "ISC"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Console user JWT token. Obtain via `/api/v1/users/login` or `/api/v1/tenantuser/tenantlogin`"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "api-key",
+        "description": "Project API Key for tenant/document operations. Obtain from Project SDK details or API Keys tab."
+      },
+      "consoleCookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "AccessToken",
+        "description": "HTTP-only cookie set on console login. Used for browser-based console sessions."
+      },
+      "tenantCookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "tenantAccessToken",
+        "description": "HTTP-only cookie set on tenant login. Used for browser-based tenant sessions."
+      },
+      "projectIdHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "project-id",
+        "description": "Project ID for tenant registration/login operations. Obtain from Project SDK details."
+      }
+    },
+    "responses": {},
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 6,
+            "example": "securePass"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "John Doe"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "example": "securePass"
+          }
+        }
+      },
+      "TenantRegisterRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "example": "janedoe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "tenant@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 6,
+            "example": "securePass"
+          }
+        }
+      },
+      "TenantLoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "tenant@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "example": "securePass"
+          }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIs..."
+          }
+        }
+      },
+      "RevokeSessionRequest": {
+        "type": "object",
+        "required": [
+          "sessionId"
+        ],
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "example": "sess_abc123"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "session",
+          "tokens"
+        ],
+        "properties": {
+          "user": {
+            "type": "object",
+            "required": [
+              "id",
+              "email",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "example": "user_abc123"
+              },
+              "email": {
+                "type": "string",
+                "example": "user@example.com"
+              },
+              "name": {
+                "type": "string",
+                "example": "John Doe"
+              }
+            }
+          },
+          "session": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "userAgent": {
+                "type": "string"
+              },
+              "ip": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "tokens": {
+            "type": "object",
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "sessionToken"
+            ],
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "refreshToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "sessionToken": {
+                "type": "string",
+                "example": "sess_abc123"
+              }
+            }
+          }
+        }
+      },
+      "RefreshTokenResponse": {
+        "type": "object",
+        "required": [
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "type": "object",
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "sessionToken"
+            ],
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "refreshToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "sessionToken": {
+                "type": "string",
+                "example": "sess_abc123"
+              }
+            }
+          }
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "user_abc123"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "userAgent": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SessionsResponse": {
+        "type": "object",
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionResponse"
+            }
+          }
+        }
+      },
+      "OAuthProvidersResponse": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "google"
+                  ]
+                },
+                "providerId": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "picture": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          }
+        }
+      },
+      "OAuthLoginResponse": {
+        "type": "object",
+        "required": [
+          "user",
+          "tokens",
+          "session",
+          "oauth"
+        ],
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "tokens": {
+            "type": "object",
+            "required": [
+              "accessToken",
+              "refreshToken",
+              "sessionToken"
+            ],
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "refreshToken": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              },
+              "sessionToken": {
+                "type": "string",
+                "example": "sess_abc123"
+              }
+            }
+          },
+          "session": {
+            "$ref": "#/components/schemas/SessionResponse"
+          },
+          "oauth": {
+            "type": "object",
+            "properties": {
+              "provider": {
+                "type": "string",
+                "example": "google"
+              },
+              "providerId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "project_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{8}$",
+            "example": "abc123de"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "My Project"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Project description"
+          },
+          "api_key": {
+            "type": "string",
+            "example": "a1b2c3d4e5f6..."
+          },
+          "api_endpoint": {
+            "type": "string",
+            "format": "uri",
+            "example": "http://localhost:20000/api/v1/abc123de"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "deleted"
+            ],
+            "example": "active"
+          },
+          "config": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "max_databases": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 50,
+                "example": 3
+              },
+              "max_tables_per_db": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 500,
+                "example": 10
+              },
+              "max_documents_per_table": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000,
+                "example": 1000
+              },
+              "cors_origins": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "https://app.example.com"
+                ]
+              }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "api_requests": {
+                "type": "integer",
+                "example": 150
+              },
+              "storage_mb": {
+                "type": "integer",
+                "example": 5
+              }
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "My Project"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true,
+            "example": "Project description"
+          }
+        }
+      },
+      "UpdateProjectRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "example": "Updated Project Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true,
+            "example": "Updated description"
+          }
+        }
+      },
+      "ProjectListResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          }
+        }
+      },
+      "SDKDetailsResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "project_id",
+              "api_key",
+              "api_endpoint",
+              "project_name"
+            ],
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "example": "abc123de"
+              },
+              "api_key": {
+                "type": "string",
+                "example": "a1b2c3d4e5f6..."
+              },
+              "api_endpoint": {
+                "type": "string",
+                "format": "uri",
+                "example": "http://localhost:20000/api/v1/abc123de"
+              },
+              "project_name": {
+                "type": "string",
+                "example": "My Project"
+              }
+            }
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "required": [
+          "key_id",
+          "api_key",
+          "name",
+          "permissions",
+          "environment",
+          "revoked",
+          "created_at"
+        ],
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "example": "key_abc123def456"
+          },
+          "api_key": {
+            "type": "string",
+            "example": "a1b2c3d4e5f6..."
+          },
+          "name": {
+            "type": "string",
+            "example": "Production Key"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "write",
+                "admin"
+              ]
+            },
+            "example": [
+              "read",
+              "write"
+            ]
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "staging",
+              "production"
+            ],
+            "example": "production"
+          },
+          "revoked": {
+            "type": "boolean",
+            "example": false
+          },
+          "revoked_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": null
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "Production Key"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "write",
+                "admin"
+              ]
+            },
+            "default": [
+              "read"
+            ],
+            "example": [
+              "read",
+              "write"
+            ]
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "staging",
+              "production"
+            ],
+            "default": "development",
+            "example": "production"
+          }
+        }
+      },
+      "ApiKeyGenerateResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "key_id",
+              "api_key",
+              "name",
+              "permissions",
+              "environment"
+            ],
+            "properties": {
+              "key_id": {
+                "type": "string",
+                "example": "key_abc123def456"
+              },
+              "api_key": {
+                "type": "string",
+                "example": "a1b2c3d4e5f6..."
+              },
+              "name": {
+                "type": "string",
+                "example": "Production Key"
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "write",
+                    "admin"
+                  ]
+                },
+                "example": [
+                  "read",
+                  "write"
+                ]
+              },
+              "environment": {
+                "type": "string",
+                "enum": [
+                  "development",
+                  "staging",
+                  "production"
+                ],
+                "example": "production"
+              }
+            }
+          }
+        }
+      },
+      "ApiKeyListResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKey"
+            }
+          }
+        }
+      },
+      "SearchProjectsRequest": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search term for project name",
+            "example": "my project"
+          }
+        }
+      },
+      "ProjectConfig": {
+        "type": "object",
+        "required": [
+          "max_databases",
+          "max_tables_per_db",
+          "max_documents_per_table",
+          "cors_origins"
+        ],
+        "properties": {
+          "max_databases": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "example": 3
+          },
+          "max_tables_per_db": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "example": 10
+          },
+          "max_documents_per_table": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "example": 1000
+          },
+          "cors_origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "https://app.example.com",
+              "*"
+            ]
+          }
+        }
+      },
+      "UpdateProjectConfigRequest": {
+        "type": "object",
+        "properties": {
+          "max_databases": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "example": 5
+          },
+          "max_tables_per_db": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "example": 20
+          },
+          "max_documents_per_table": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000,
+            "example": 5000
+          },
+          "cors_origins": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "https://app.example.com",
+              "https://admin.example.com"
+            ]
+          }
+        }
+      },
+      "Database": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "project_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "my_database"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "proj_abc123"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateDatabaseRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "my_database"
+          }
+        }
+      },
+      "DatabaseListResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "project_id",
+              "total_databases",
+              "databases"
+            ],
+            "properties": {
+              "project_id": {
+                "type": "string",
+                "example": "proj_abc123"
+              },
+              "total_databases": {
+                "type": "integer",
+                "example": 2
+              },
+              "databases": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Database"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Collection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "database_id",
+          "project_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "users_collection"
+          },
+          "database_id": {
+            "type": "string",
+            "example": "db_abc123"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "proj_abc123"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateCollectionRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "users_collection"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "nullable": true,
+            "example": "Collection for user data"
+          }
+        }
+      },
+      "CollectionListResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "database_id",
+              "project_id",
+              "total_collections",
+              "collections"
+            ],
+            "properties": {
+              "database_id": {
+                "type": "string",
+                "example": "db_abc123"
+              },
+              "project_id": {
+                "type": "string",
+                "example": "proj_abc123"
+              },
+              "total_collections": {
+                "type": "integer",
+                "example": 5
+              },
+              "collections": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Collection"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Attribute": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "type",
+          "required",
+          "collection_id",
+          "database_id",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "email"
+          },
+          "type": {
+            "type": "string",
+            "example": "VARCHAR(255)"
+          },
+          "required": {
+            "type": "boolean",
+            "example": true
+          },
+          "collection_id": {
+            "type": "string",
+            "example": "col_abc123"
+          },
+          "database_id": {
+            "type": "string",
+            "example": "db_abc123"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateAttributeRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "example": "email"
+          },
+          "type": {
+            "type": "string",
+            "example": "VARCHAR(255)"
+          },
+          "required": {
+            "type": "boolean",
+            "default": false,
+            "example": true
+          }
+        }
+      },
+      "UpdateAttributeRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$",
+            "example": "email_address"
+          },
+          "type": {
+            "type": "string",
+            "example": "VARCHAR(300)"
+          },
+          "required": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "AttributeListResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "attributes",
+              "count"
+            ],
+            "properties": {
+              "attributes": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Attribute"
+                }
+              },
+              "count": {
+                "type": "integer",
+                "example": 5
+              }
+            }
+          }
+        }
+      },
+      "AttributeTypes": {
+        "type": "object",
+        "properties": {
+          "VARCHAR": {
+            "type": "string",
+            "description": "Variable character string (requires size)"
+          },
+          "INT": {
+            "type": "string",
+            "description": "Integer number"
+          },
+          "TEXT": {
+            "type": "string",
+            "description": "Long text content"
+          },
+          "DATE": {
+            "type": "string",
+            "description": "Date only (YYYY-MM-DD)"
+          },
+          "DATETIME": {
+            "type": "string",
+            "description": "Date and time (ISO 8601)"
+          },
+          "BOOLEAN": {
+            "type": "string",
+            "description": "True/false value"
+          },
+          "DECIMAL": {
+            "type": "string",
+            "description": "Decimal number (requires precision/scale)"
+          }
+        }
+      },
+      "Document": {
+        "type": "object",
+        "required": [
+          "id",
+          "collection_id",
+          "data",
+          "created_at",
+          "project_id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "doc_1703123456789_abc123def"
+          },
+          "collection_id": {
+            "type": "string",
+            "example": "col_abc123"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Document fields matching collection attribute definitions",
+            "example": {
+              "name": "John Doe",
+              "email": "john@example.com",
+              "age": 30,
+              "status": "active"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "proj_abc123"
+          }
+        }
+      },
+      "CreateDocumentRequest": {
+        "type": "object",
+        "description": "Document fields must match collection attribute definitions. Required fields must be provided.",
+        "additionalProperties": true,
+        "example": {
+          "name": "John Doe",
+          "email": "john@example.com",
+          "age": 30,
+          "status": "active"
+        }
+      },
+      "UpdateDocumentRequest": {
+        "type": "object",
+        "description": "Partial update - only provided fields will be updated. Must match collection attribute definitions.",
+        "additionalProperties": true,
+        "example": {
+          "name": "John Updated",
+          "age": 31,
+          "status": "inactive"
+        }
+      },
+      "DocumentResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "$ref": "#/components/schemas/Document"
+          }
+        }
+      },
+      "GetDocumentsQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "example": 10
+          }
+        }
+      },
+      "QueryDocumentsRequest": {
+        "type": "object",
+        "required": [
+          "filters"
+        ],
+        "properties": {
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "field",
+                "operator"
+              ],
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "example": "age"
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "notEquals",
+                    "greaterThan",
+                    "greaterThanOrEqual",
+                    "lessThan",
+                    "lessThanOrEqual",
+                    "contains",
+                    "notContains",
+                    "startsWith",
+                    "endsWith",
+                    "in",
+                    "notIn",
+                    "isNull",
+                    "isNotNull"
+                  ],
+                  "example": "gte"
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "array"
+                  ],
+                  "description": "Value to filter by (not required for isNull/isNotNull)"
+                }
+              }
+            }
+          },
+          "sort": {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "example": "created_at"
+              },
+              "order": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ],
+                "example": "desc"
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "example": 10
+          }
+        }
+      },
+      "QueryDocumentsResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "documents",
+              "pagination"
+            ],
+            "properties": {
+              "documents": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              },
+              "pagination": {
+                "type": "object",
+                "required": [
+                  "currentPage",
+                  "totalPages",
+                  "totalDocuments",
+                  "hasNextPage",
+                  "hasPrevPage"
+                ],
+                "properties": {
+                  "currentPage": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "totalPages": {
+                    "type": "integer",
+                    "example": 5
+                  },
+                  "totalDocuments": {
+                    "type": "integer",
+                    "example": 50
+                  },
+                  "hasNextPage": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "hasPrevPage": {
+                    "type": "boolean",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "FilterOperators": {
+        "type": "object",
+        "properties": {
+          "equals": {
+            "type": "string",
+            "description": "Equal to"
+          },
+          "notEquals": {
+            "type": "string",
+            "description": "Not equal to"
+          },
+          "greaterThan": {
+            "type": "string",
+            "description": "Greater than"
+          },
+          "greaterThanOrEqual": {
+            "type": "string",
+            "description": "Greater than or equal to"
+          },
+          "lessThan": {
+            "type": "string",
+            "description": "Less than"
+          },
+          "lessThanOrEqual": {
+            "type": "string",
+            "description": "Less than or equal to"
+          },
+          "contains": {
+            "type": "string",
+            "description": "Contains substring"
+          },
+          "notContains": {
+            "type": "string",
+            "description": "Does not contain substring"
+          },
+          "startsWith": {
+            "type": "string",
+            "description": "Starts with"
+          },
+          "endsWith": {
+            "type": "string",
+            "description": "Ends with"
+          },
+          "in": {
+            "type": "string",
+            "description": "Value in array"
+          },
+          "notIn": {
+            "type": "string",
+            "description": "Value not in array"
+          },
+          "isNull": {
+            "type": "string",
+            "description": "Field is null"
+          },
+          "isNotNull": {
+            "type": "string",
+            "description": "Field is not null"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "example": "Request validation failed"
+              },
+              "details": {
+                "type": "object",
+                "description": "Optional field-level error details"
+              }
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "type": "object",
+        "required": [
+          "success",
+          "error"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "details"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "VALIDATION_ERROR"
+              },
+              "message": {
+                "type": "string",
+                "example": "Request validation failed"
+              },
+              "details": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PaginationResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "documents",
+              "pagination"
+            ],
+            "properties": {
+              "documents": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "pagination": {
+                "type": "object",
+                "required": [
+                  "currentPage",
+                  "totalPages",
+                  "totalDocuments",
+                  "limit"
+                ],
+                "properties": {
+                  "currentPage": {
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "totalPages": {
+                    "type": "integer",
+                    "example": 5
+                  },
+                  "totalDocuments": {
+                    "type": "integer",
+                    "example": 50
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "example": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "required": [
+          "currentPage",
+          "totalPages",
+          "totalItems",
+          "itemsPerPage"
+        ],
+        "properties": {
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalItems": {
+            "type": "integer"
+          },
+          "itemsPerPage": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "projectIdParam": {
+        "name": "projectId",
+        "in": "path",
+        "description": "Project ID (e.g., 3e5aabc5 or MongoDB ObjectId)",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "projectIdParamSnake": {
+        "name": "project_id",
+        "in": "path",
+        "description": "Project ID (snake_case param for Baas routes)",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "databaseIdParam": {
+        "name": "database_id",
+        "in": "path",
+        "description": "Database ID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "collectionIdParam": {
+        "name": "collection_id",
+        "in": "path",
+        "description": "Collection ID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "attributeIdParam": {
+        "name": "attribute_id",
+        "in": "path",
+        "description": "Attribute/Column ID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "documentIdParam": {
+        "name": "document_id",
+        "in": "path",
+        "description": "Document ID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "sessionIdParam": {
+        "name": "sessionId",
+        "in": "path",
+        "description": "Session ID to revoke",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "identityIdParam": {
+        "name": "identityId",
+        "in": "path",
+        "description": "OAuth Identity ID",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "pageQuery": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number (starts at 1)",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "limitQuery": {
+        "name": "limit",
+        "in": "query",
+        "description": "Items per page (max 100)",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      "searchQuery": {
+        "name": "query",
+        "in": "query",
+        "description": "Search term",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "keyIdParam": {
+        "name": "keyId",
+        "in": "path",
+        "description": "API Key ID to revoke",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    },
+    {
+      "apiKeyAuth": []
+    },
+    {
+      "cookieAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication & Authorization endpoints"
+    },
+    {
+      "name": "Projects",
+      "description": "Project management endpoints"
+    },
+    {
+      "name": "Databases",
+      "description": "Database management endpoints"
+    },
+    {
+      "name": "Collections",
+      "description": "Collection management endpoints"
+    },
+    {
+      "name": "Attributes",
+      "description": "Attribute/Column management endpoints"
+    },
+    {
+      "name": "Documents",
+      "description": "Document CRUD & Query operations"
+    },
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    }
+  ],
+  "paths": {
+    "/api/v1/projects/create": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Create a new project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Project created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Project limit reached (maximum 5 projects)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Project name already exists",
+            "content": {
+              "application/json": null,
+              "schema": {
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/list": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List all projects for current user",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Comma-separated fields to include (e.g., 'config')",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "config"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of projects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/search": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Search projects by name",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/searchQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "query",
+                        "count",
+                        "projects"
+                      ],
+                      "properties": {
+                        "query": {
+                          "type": "string",
+                          "example": "my project"
+                        },
+                        "count": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "projects": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Project"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get project details",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Project"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": null,
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "project_id",
+                        "name",
+                        "api_key",
+                        "status",
+                        "updated_at"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+                        },
+                        "project_id": {
+                          "type": "string",
+                          "example": "abc123de"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Updated Project"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true,
+                          "example": "Updated description"
+                        },
+                        "api_key": {
+                          "type": "string",
+                          "example": "a1b2c3d4e5f6..."
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "suspended",
+                            "deleted"
+                          ],
+                          "example": "active"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Project name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Delete project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "project_id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+                        },
+                        "project_id": {
+                          "type": "string",
+                          "example": "abc123de"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "My Project"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": null,
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to delete project and associated resources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/sdk": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get project SDK configuration (API key + base URL)",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SDK configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDKDetailsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found or inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Get project configuration (CORS, limits)",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Project configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": null,
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Update project configuration (CORS, limits)",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Project configuration updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": null,
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/apikeys": {
+      "post": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Generate new API key for project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key generated (only time full key is shown)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyGenerateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "List all API keys for project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of API keys (keys are masked)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/apikeys/{keyId}": {
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "summary": "Revoke an API key",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/keyIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not project owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project or API key not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{project_id}/collections/{collection_id}/documents": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Create a new document in a collection",
+        "description": "Creates a document with fields matching the collection's attribute definitions.\nRequired fields must be provided. Field types are validated against attribute types.\n",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Get all documents from a collection with pagination",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/pageQuery"
+          },
+          {
+            "$ref": "#/components/parameters/limitQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDocumentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{project_id}/collections/{collection_id}/documents/query": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Query documents with filters, sorting, and pagination",
+        "description": "Advanced query with filter operators.\n**Supported operators:**\n- `equals` - Equal to\n- `notEquals` - Not equal to\n- `greaterThan` - Greater than\n- `greaterThanOrEqual` - Greater than or equal to\n- `lessThan` - Less than\n- `lessThanOrEqual` - Less than or equal to\n- `contains` - Pattern matching (substring)\n- `notContains` - Does not contain substring\n- `startsWith` - Starts with\n- `endsWith` - Ends with\n- `in` - Value in array\n- `notIn` - Value not in array\n- `isNull` - Field is null\n- `isNotNull` - Field is not null\n",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryDocumentsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Query results with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryDocumentsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/{project_id}/collections/{collection_id}/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Get a single document by ID",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/documentIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document or collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Update a document by ID",
+        "description": "Partial update - only provided fields will be updated.\nFields must match collection attribute definitions.\n",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/documentIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document or collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Delete a document by ID",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/documentIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data",
+                    "message"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "null",
+                      "example": null
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Document deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Document or collection not found",
+            "content": {
+              "application/json": null,
+              "schema": {
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/databases": {
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Create a new database within a project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatabaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Database created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Database"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Database name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "List all databases in a project",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of databases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Project not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/databases/{database_id}": {
+      "delete": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Delete a database",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/databaseIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Database deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "project_id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "my_database"
+                        },
+                        "project_id": {
+                          "type": "string",
+                          "example": "proj_abc123"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Database not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/databases/{database_id}/collections": {
+      "post": {
+        "tags": [
+          "Collections"
+        ],
+        "summary": "Create a new collection in a database",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/databaseIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Collection created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Collection"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Database not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Collection name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Collections"
+        ],
+        "summary": "List all collections in a database",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/databaseIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Database not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/collections/{collection_id}": {
+      "delete": {
+        "tags": [
+          "Collections"
+        ],
+        "summary": "Delete a collection",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "database_id",
+                        "project_id"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "users_collection"
+                        },
+                        "database_id": {
+                          "type": "string",
+                          "example": "db_abc123"
+                        },
+                        "project_id": {
+                          "type": "string",
+                          "example": "proj_abc123"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/collections/{collection_id}/attributes": {
+      "post": {
+        "tags": [
+          "Attributes"
+        ],
+        "summary": "Add a new attribute (column) to a collection",
+        "description": "**Supported attribute types:**\n- `VARCHAR` - Variable character string (requires `size` 1-65535)\n- `INT` - Integer number\n- `TEXT` - Long text content\n- `DATE` - Date only (YYYY-MM-DD)\n- `DATETIME` - Date and time (ISO 8601)\n- `BOOLEAN` - True/false value\n- `DECIMAL` - Decimal number\n",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAttributeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Attribute created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Attribute"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Attribute name already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Attributes"
+        ],
+        "summary": "List all attributes for a collection",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of attributes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttributeListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/collections/{collection_id}/attributes/{attribute_id}": {
+      "put": {
+        "tags": [
+          "Attributes"
+        ],
+        "summary": "Update an attribute",
+        "description": "Update attribute properties. Type changes may require data migration.\nSize can only be increased for VARCHAR.\n",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/attributeIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAttributeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attribute updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Attribute"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or attribute not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Attributes"
+        ],
+        "summary": "Delete an attribute",
+        "description": "Permanently removes the attribute and all its data from documents.\nThis action cannot be undone.\n",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectIdParamSnake"
+          },
+          {
+            "$ref": "#/components/parameters/collectionIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/attributeIdParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "confirm"
+                ],
+                "properties": {
+                  "confirm": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ],
+                    "description": "Must be true to confirm deletion"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Attribute deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "deleted",
+                        "documents_affected"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "example": "64f1a2b3c4d5e6f7a8b9c0d1"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "email"
+                        },
+                        "deleted": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "documents_affected": {
+                          "type": "integer",
+                          "example": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - No access to project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Collection or attribute not found",
+            "content": {
+              "application/json": null,
+              "schema": {
+                "$ref": "#/components/schemas/ErrorResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new console user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login console user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh access token",
+        "description": "Refresh token can be provided in request body OR read from RefreshToken cookie",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RefreshTokenResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid refresh token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout console user (revokes refresh token)",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current console user profile",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session expired or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/sessions": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get all active sessions for current user",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionsResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Revoke a specific session",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "consoleCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/sessionIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/tenantRegister": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Register a new tenant user",
+        "security": [
+          {
+            "projectIdHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant user registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/tenantlogin": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login tenant user",
+        "security": [
+          {
+            "projectIdHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantLoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoginResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/tenantlogout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout tenant user",
+        "security": [
+          {
+            "tenantCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/getTenantsessions": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get all active sessions for tenant user",
+        "security": [
+          {
+            "tenantCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SessionsResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/revokeSession/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Revoke a specific tenant session",
+        "security": [
+          {
+            "tenantCookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/sessionIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tenantuser/getCurrentUser": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get current tenant user profile",
+        "security": [
+          {
+            "tenantCookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UserResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Initiate Google OAuth flow",
+        "description": "Returns Google OAuth authorization URL",
+        "responses": {
+          "200": {
+            "description": "OAuth URL generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "authUrl",
+                        "state"
+                      ],
+                      "properties": {
+                        "authUrl": {
+                          "type": "string",
+                          "example": "https://accounts.google.com/o/oauth2/v2/auth?..."
+                        },
+                        "state": {
+                          "type": "string",
+                          "example": "random_state_string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google/callback": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Google OAuth callback",
+        "description": "Handles OAuth callback and creates/authenticates user",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Authorization code from Google"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "OAuth state parameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Google OAuth authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/OAuthLoginResponse"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "OAuth error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google/refresh/{identityId}": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Refresh Google OAuth access token",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/identityIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Identity not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google/revoke/{identityId}": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Revoke Google OAuth access",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/identityIdParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Access revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Identity not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Basic health check",
+        "description": "Returns basic server health status",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthCheckResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/redis": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Redis connectivity health check",
+        "description": "Tests Redis connection and measures latency",
+        "responses": {
+          "200": {
+            "description": "Redis is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedisHealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Redis unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedisHealthErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/detailed": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Detailed health check for all services",
+        "description": "Checks MongoDB, MySQL, and Redis connectivity",
+        "responses": {
+          "200": {
+            "description": "All services healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedHealthResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "One or more services degraded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailedHealthErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
