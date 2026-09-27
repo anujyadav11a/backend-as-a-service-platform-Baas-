@@ -1,4 +1,9 @@
 /**
+ * Database API Documentation
+ * @module DatabaseDocs
+ */
+
+/**
  * @openapi
  * /api/v1/projects/{project_id}/databases:
  *   post:
@@ -6,9 +11,9 @@
  *     summary: Create a new database within a project
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *     requestBody:
  *       required: true
  *       content:
@@ -30,7 +35,7 @@
  *                 data:
  *                   $ref: '#/components/schemas/Database'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -59,23 +64,22 @@
 
 /**
  * @openapi
- * /api/v1/projects/{project_id}/databases/{database_id}:
- *   delete:
+ * /api/v1/projects/{project_id}/databases:
+ *   get:
  *     tags: [Databases]
- *     summary: Delete a database
+ *     summary: List all databases in a project
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
- *       - $ref: '#/components/parameters/databaseIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *     responses:
  *       '200':
- *         description: Database deleted
+ *         description: List of databases
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               $ref: '#/components/schemas/DatabaseListResponse'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -89,7 +93,7 @@
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
- *         description: Database not found
+ *         description: Project not found
  *         content:
  *           application/json:
  *             schema:
@@ -98,25 +102,19 @@
 
 /**
  * @openapi
- * /api/v1/projects/{project_id}/databases/{database_id}/collections:
- *   post:
- *     tags: [Collections]
- *     summary: Create a new collection in a database
+ * /api/v1/projects/{project_id}/databases/{database_id}:
+ *   delete:
+ *     tags: [Databases]
+ *     summary: Delete a database
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/databaseIdParam'
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/CreateCollectionRequest'
  *     responses:
- *       '201':
- *         description: Collection created
+ *       '200':
+ *         description: Database deleted
  *         content:
  *           application/json:
  *             schema:
@@ -127,9 +125,18 @@
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/Collection'
- *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *                   type: object
+ *                   required: [id, name, project_id]
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: '64f1a2b3c4d5e6f7a8b9c0d1'
+ *                     name:
+ *                       type: string
+ *                       example: 'my_database'
+ *                     project_id:
+ *                       type: string
+ *                       example: 'proj_abc123'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -144,53 +151,11 @@
  *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Database not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       '409':
- *         description: Collection name already exists
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 
-/**
- * @openapi
- * /api/v1/projects/{project_id}/databases/{database_id}/collections:
- *   get:
- *     tags: [Collections]
- *     summary: List all collections in a database
- *     security:
- *       - bearerAuth: []
- *       - cookieAuth: []
- *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
- *       - $ref: '#/components/parameters/databaseIdParam'
- *     responses:
- *       '200':
- *         description: List of collections
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/CollectionListResponse'
- *       '401':
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       '403':
- *         description: Forbidden - No access to project
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       '404':
- *         description: Database not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
+// Dummy export to make this a valid ES module for swagger-jsdoc
+export const databaseDocs = {};

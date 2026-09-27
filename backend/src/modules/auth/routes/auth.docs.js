@@ -1,4 +1,9 @@
 /**
+ * Auth API Documentation
+ * @module AuthDocs
+ */
+
+/**
  * @openapi
  * /api/v1/users/register:
  *   post:
@@ -18,7 +23,7 @@
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '409':
  *         description: Email already registered
  *         content:
@@ -52,9 +57,9 @@
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/TokenResponse'
+ *                   $ref: '#/components/schemas/LoginResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid credentials
  *         content:
@@ -69,8 +74,9 @@
  *   post:
  *     tags: [Auth]
  *     summary: Refresh access token
+ *     description: Refresh token can be provided in request body OR read from RefreshToken cookie
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
@@ -88,9 +94,9 @@
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/TokenResponse'
+ *                   $ref: '#/components/schemas/RefreshTokenResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid refresh token
  *         content:
@@ -107,13 +113,7 @@
  *     summary: Logout console user (revokes refresh token)
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/LogoutRequest'
+ *       - consoleCookieAuth: []
  *     responses:
  *       '200':
  *         description: Logged out successfully
@@ -122,9 +122,40 @@
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @openapi
+ * /api/v1/users/me:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Get current console user profile
+ *     security:
+ *       - bearerAuth: []
+ *       - consoleCookieAuth: []
+ *     responses:
+ *       '200':
+ *         description: Current user profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/UserResponse'
+ *       '401':
+ *         description: Session expired or invalid
  *         content:
  *           application/json:
  *             schema:
@@ -139,7 +170,7 @@
  *     summary: Get all active sessions for current user
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     responses:
  *       '200':
  *         description: List of active sessions
@@ -170,7 +201,7 @@
  *     summary: Revoke a specific session
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/sessionIdParam'
  *     responses:
@@ -201,7 +232,7 @@
  *     tags: [Auth]
  *     summary: Register a new tenant user
  *     security:
- *       - projectId: []
+ *       - projectIdHeader: []
  *     requestBody:
  *       required: true
  *       content:
@@ -216,7 +247,7 @@
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '409':
  *         description: Email already registered
  *         content:
@@ -232,7 +263,7 @@
  *     tags: [Auth]
  *     summary: Login tenant user
  *     security:
- *       - projectId: []
+ *       - projectIdHeader: []
  *     requestBody:
  *       required: true
  *       content:
@@ -252,9 +283,9 @@
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/TokenResponse'
+ *                   $ref: '#/components/schemas/LoginResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid credentials
  *         content:
@@ -270,7 +301,7 @@
  *     tags: [Auth]
  *     summary: Logout tenant user
  *     security:
- *       - apiKeyAuth: []
+ *       - tenantCookieAuth: []
  *     responses:
  *       '200':
  *         description: Logged out successfully
@@ -293,7 +324,7 @@
  *     tags: [Auth]
  *     summary: Get all active sessions for tenant user
  *     security:
- *       - apiKeyAuth: []
+ *       - tenantCookieAuth: []
  *     responses:
  *       '200':
  *         description: List of active sessions
@@ -323,7 +354,7 @@
  *     tags: [Auth]
  *     summary: Revoke a specific tenant session
  *     security:
- *       - apiKeyAuth: []
+ *       - tenantCookieAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/sessionIdParam'
  *     responses:
@@ -354,7 +385,7 @@
  *     tags: [Auth]
  *     summary: Get current tenant user profile
  *     security:
- *       - apiKeyAuth: []
+ *       - tenantCookieAuth: []
  *     responses:
  *       '200':
  *         description: Current user profile
@@ -383,10 +414,35 @@
  *   get:
  *     tags: [Auth]
  *     summary: Initiate Google OAuth flow
- *     description: Redirects to Google OAuth consent screen
+ *     description: Returns Google OAuth authorization URL
  *     responses:
- *       '302':
- *         description: Redirect to Google OAuth
+ *       '200':
+ *         description: OAuth URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   required: [authUrl, state]
+ *                   properties:
+ *                     authUrl:
+ *                       type: string
+ *                       example: "https://accounts.google.com/o/oauth2/v2/auth?..."
+ *                     state:
+ *                       type: string
+ *                       example: "random_state_string"
+ *       '500':
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 
 /**
@@ -403,9 +459,26 @@
  *         schema:
  *           type: string
  *         description: Authorization code from Google
+ *       - name: state
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: OAuth state parameter
  *     responses:
- *       '302':
- *         description: Redirect to frontend with tokens
+ *       '200':
+ *         description: Google OAuth authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/OAuthLoginResponse'
  *       '400':
  *         description: OAuth error
  *         content:
@@ -459,3 +532,6 @@
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+
+// Dummy export to make this a valid ES module for swagger-jsdoc
+export const authDocs = {};

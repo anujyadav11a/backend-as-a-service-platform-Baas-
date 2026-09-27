@@ -1,4 +1,9 @@
 /**
+ * Attribute API Documentation
+ * @module AttributeDocs
+ */
+
+/**
  * @openapi
  * /api/v1/projects/{project_id}/collections/{collection_id}/attributes:
  *   post:
@@ -15,9 +20,9 @@
  *       - `DECIMAL` - Decimal number
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     requestBody:
  *       required: true
@@ -40,7 +45,7 @@
  *                 data:
  *                   $ref: '#/components/schemas/Attribute'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -75,9 +80,9 @@
  *     summary: List all attributes for a collection
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     responses:
  *       '200':
@@ -117,9 +122,9 @@
  *       Size can only be increased for VARCHAR.
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/attributeIdParam'
  *     requestBody:
@@ -143,7 +148,7 @@
  *                 data:
  *                   $ref: '#/components/schemas/Attribute'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -175,18 +180,53 @@
  *       This action cannot be undone.
  *     security:
  *       - bearerAuth: []
- *       - cookieAuth: []
+ *       - consoleCookieAuth: []
  *     parameters:
- *       - $ref: '#/components/parameters/projectIdParam'
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/attributeIdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [confirm]
+ *             properties:
+ *               confirm:
+ *                 type: boolean
+ *                 enum: [true]
+ *                 description: Must be true to confirm deletion
  *     responses:
  *       '200':
  *         description: Attribute deleted
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               type: object
+ *               required: [success, data]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   required: [id, name, deleted, documents_affected]
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: '64f1a2b3c4d5e6f7a8b9c0d1'
+ *                     name:
+ *                       type: string
+ *                       example: 'email'
+ *                     deleted:
+ *                       type: boolean
+ *                       example: true
+ *                     documents_affected:
+ *                       type: integer
+ *                       example: 0
+ *       '400':
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Unauthorized
  *         content:
@@ -203,6 +243,9 @@
  *         description: Collection or attribute not found
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
  */
+
+// Dummy export to make this a valid ES module for swagger-jsdoc
+export const attributeDocs = {};

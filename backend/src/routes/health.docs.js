@@ -11,24 +11,7 @@
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               required: [success, status, timestamp, uptime, environment]
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 status:
- *                   type: string
- *                   example: healthy
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                 uptime:
- *                   type: number
- *                   example: 3600.5
- *                 environment:
- *                   type: string
- *                   example: development
+ *               $ref: '#/components/schemas/HealthCheckResponse'
  */
 
 /**
@@ -44,44 +27,13 @@
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               required: [success, status, service, latencyMs, timestamp]
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 status:
- *                   type: string
- *                   example: healthy
- *                 service:
- *                   type: string
- *                   example: redis
- *                 latencyMs:
- *                   type: integer
- *                   example: 5
- *                 timestamp:
- *                   type: string
- *                   format: date-time
+ *               $ref: '#/components/schemas/RedisHealthResponse'
  *       '503':
  *         description: Redis unavailable
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               required: [success, status, service, timestamp]
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 status:
- *                   type: string
- *                   example: unhealthy
- *                 service:
- *                   type: string
- *                   example: redis
- *                 timestamp:
- *                   type: string
- *                   format: date-time
+ *               $ref: '#/components/schemas/RedisHealthErrorResponse'
  */
 
 /**
@@ -97,59 +49,11 @@
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               required: [success, status, checks, timestamp]
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 status:
- *                   type: string
- *                   example: healthy
- *                 checks:
- *                   type: object
- *                   required: [redis, mongodb, mysql]
- *                   properties:
- *                     redis:
- *                       type: boolean
- *                       example: true
- *                     mongodb:
- *                       type: boolean
- *                       example: true
- *                     mysql:
- *                       type: boolean
- *                       example: true
- *                 timestamp:
- *                   type: string
- *                   format: date-time
+ *               $ref: '#/components/schemas/DetailedHealthResponse'
  *       '503':
  *         description: One or more services degraded
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               required: [success, status, checks, timestamp]
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 status:
- *                   type: string
- *                   example: degraded
- *                 checks:
- *                   type: object
- *                   required: [redis, mongodb, mysql]
- *                   properties:
- *                     redis:
- *                       type: boolean
- *                       example: true
- *                     mongodb:
- *                       type: boolean
- *                       example: false
- *                     mysql:
- *                       type: boolean
- *                       example: true
- *                 timestamp:
- *                   type: string
- *                   format: date-time
+ *               $ref: '#/components/schemas/DetailedHealthErrorResponse'
  */

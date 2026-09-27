@@ -1,6 +1,11 @@
 /**
+ * Document API Documentation
+ * @module DocumentDocs
+ */
+
+/**
  * @openapi
- * /api/v1/collection/{collection_id}/documents:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents:
  *   post:
  *     tags: [Documents]
  *     summary: Create a new document in a collection
@@ -10,6 +15,7 @@
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     requestBody:
  *       required: true
@@ -25,9 +31,15 @@
  *             schema:
  *               $ref: '#/components/schemas/DocumentResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid or missing API key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
  *         content:
  *           application/json:
  *             schema:
@@ -42,13 +54,14 @@
 
 /**
  * @openapi
- * /api/v1/collection/{collection_id}/documents:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents:
  *   get:
  *     tags: [Documents]
  *     summary: Get all documents from a collection with pagination
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/pageQuery'
  *       - $ref: '#/components/parameters/limitQuery'
@@ -65,6 +78,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Collection not found
  *         content:
@@ -75,24 +94,31 @@
 
 /**
  * @openapi
- * /api/v1/collection/{collection_id}/documents/query:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents/query:
  *   post:
  *     tags: [Documents]
  *     summary: Query documents with filters, sorting, and pagination
  *     description: |
- *       Advanced query with MongoDB-style filter operators.
+ *       Advanced query with filter operators.
  *       **Supported operators:**
- *       - `$eq` - Equal to
- *       - `$ne` - Not equal to
- *       - `$gt` - Greater than
- *       - `$gte` - Greater than or equal to
- *       - `$lt` - Less than
- *       - `$lte` - Less than or equal to
- *       - `$like` - Pattern matching (SQL LIKE, e.g., "John%")
- *       - `$in` - Value in array
+ *       - `equals` - Equal to
+ *       - `notEquals` - Not equal to
+ *       - `greaterThan` - Greater than
+ *       - `greaterThanOrEqual` - Greater than or equal to
+ *       - `lessThan` - Less than
+ *       - `lessThanOrEqual` - Less than or equal to
+ *       - `contains` - Pattern matching (substring)
+ *       - `notContains` - Does not contain substring
+ *       - `startsWith` - Starts with
+ *       - `endsWith` - Ends with
+ *       - `in` - Value in array
+ *       - `notIn` - Value not in array
+ *       - `isNull` - Field is null
+ *       - `isNotNull` - Field is not null
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *     requestBody:
  *       required: true
@@ -108,9 +134,15 @@
  *             schema:
  *               $ref: '#/components/schemas/QueryDocumentsResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid or missing API key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
  *         content:
  *           application/json:
  *             schema:
@@ -125,13 +157,14 @@
 
 /**
  * @openapi
- * /api/v1/collection/{collection_id}/documents/{document_id}:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents/{document_id}:
  *   get:
  *     tags: [Documents]
  *     summary: Get a single document by ID
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/documentIdParam'
  *     responses:
@@ -147,6 +180,12 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       '404':
  *         description: Document or collection not found
  *         content:
@@ -157,7 +196,7 @@
 
 /**
  * @openapi
- * /api/v1/collection/{collection_id}/documents/{document_id}:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents/{document_id}:
  *   put:
  *     tags: [Documents]
  *     summary: Update a document by ID
@@ -167,6 +206,7 @@
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/documentIdParam'
  *     requestBody:
@@ -183,9 +223,15 @@
  *             schema:
  *               $ref: '#/components/schemas/DocumentResponse'
  *       '400':
- *         $ref: '#/components/responses/ValidationError'
+ *         $ref: '#/components/schemas/ValidationError'
  *       '401':
  *         description: Invalid or missing API key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
  *         content:
  *           application/json:
  *             schema:
@@ -200,13 +246,14 @@
 
 /**
  * @openapi
- * /api/v1/collection/{collection_id}/documents/{document_id}:
+ * /api/v1/projects/{project_id}/collections/{collection_id}/documents/{document_id}:
  *   delete:
  *     tags: [Documents]
  *     summary: Delete a document by ID
  *     security:
  *       - apiKeyAuth: []
  *     parameters:
+ *       - $ref: '#/components/parameters/projectIdParamSnake'
  *       - $ref: '#/components/parameters/collectionIdParam'
  *       - $ref: '#/components/parameters/documentIdParam'
  *     responses:
@@ -215,9 +262,26 @@
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/SuccessResponse'
+ *               type: object
+ *               required: [success, data, message]
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: 'null'
+ *                   example: null
+ *                 message:
+ *                   type: string
+ *                   example: 'Document deleted successfully'
  *       '401':
  *         description: Invalid or missing API key
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '403':
+ *         description: Forbidden - No access to project
  *         content:
  *           application/json:
  *             schema:
@@ -226,6 +290,9 @@
  *         description: Document or collection not found
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *           schema:
+ *             $ref: '#/components/schemas/ErrorResponse'
  */
+
+// Dummy export to make this a valid ES module for swagger-jsdoc
+export const documentDocs = {};
