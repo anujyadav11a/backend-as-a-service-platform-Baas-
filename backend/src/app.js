@@ -17,12 +17,16 @@ import { tenantRefreshTokenMiddleware } from './middleware/tenantAuth.middleware
 import { sessionMiddleware } from './middleware/googleauthsession.middleware.js';
 
 import swaggerUi from 'swagger-ui-express';
-import swaggerDocumnet from '../docs/swagger.js';
+import fs from 'fs';
+import path from 'path';
+
+const specPath = path.join(process.cwd(), 'docs', 'openapi.json');
+const swaggerDocument = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 
 
 
 const app = express();
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocumnet));
+
 
 const Options={
     origin:true,
@@ -46,6 +50,13 @@ app.use(express.json({limit:"10kb"}))
 app.use(express.urlencoded({limit:"10kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
+
+// Swagger UI Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  swaggerOptions: { persistAuthorization: true }
+}));
 
 // Session middleware for OAuth state management
 app.use(sessionMiddleware)
