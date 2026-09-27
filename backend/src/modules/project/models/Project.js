@@ -215,6 +215,10 @@ projectSchema.methods.updateUsage = function(type, amount = 1) {
     return this.save();
 };
 
+projectSchema.methods.updateUsageStats = async function (statName) {
+    return this.updateUsage(statName, 1);
+};
+
 projectSchema.methods.isWithinLimits = function() {
     const config = this.config || {};
     const usage = this.usage_stats || {};
@@ -237,8 +241,8 @@ projectSchema.statics.findByProjectId = function(project_Id) {
     return this.findOne({ project_id: project_Id, status: 'active' });
 };
 
-projectSchema.statics.findByApiKey = function(api_Key) {
-    return this.findOne({ api_key: api_Key, status: 'active' }).lean();
+projectSchema.statics.findByApiKey = function (api_Key) {
+    return this.findOne({ api_key: api_Key });
 };
 
 projectSchema.statics.findByOwner = function(owner_Id) {
