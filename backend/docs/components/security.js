@@ -11,16 +11,22 @@ export const securitySchemes = {
     name: 'api-key',
     description: 'Project API Key for tenant/document operations. Obtain from Project SDK details or API Keys tab.'
   },
-  cookieAuth: {
+  consoleCookieAuth: {
     type: 'apiKey',
     in: 'cookie',
-    name: 'accessToken',
-    description: 'HTTP-only cookie set on login. Used for browser-based console sessions.'
+    name: 'AccessToken',
+    description: 'HTTP-only cookie set on console login. Used for browser-based console sessions.'
   },
-  projectId:{
-    type: 'project-id',
+  tenantCookieAuth: {
+    type: 'apiKey',
+    in: 'cookie',
+    name: 'tenantAccessToken',
+    description: 'HTTP-only cookie set on tenant login. Used for browser-based tenant sessions.'
+  },
+  projectIdHeader: {
+    type: 'apiKey',
     in: 'header',
     name: 'project-id',
-    description: 'Project ID for tenant/document operations. Obtain from Project SDK details or API Keys tab.'
+    description: 'Project ID for tenant registration/login operations. Obtain from Project SDK details.'
   }
 };

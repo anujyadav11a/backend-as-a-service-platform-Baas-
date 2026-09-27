@@ -6,12 +6,12 @@ export const parameters = {
     required: true,
     schema: { type: 'string', minLength: 1 }
   },
-  projectSlugParam: {
-    name: 'slug',
+  projectIdParamSnake: {
+    name: 'project_id',
     in: 'path',
-    description: 'Project slug/identifier',
+    description: 'Project ID (snake_case param for Baas routes)',
     required: true,
-    schema: { type: 'string' }
+    schema: { type: 'string', minLength: 1 }
   },
   databaseIdParam: {
     name: 'database_id',
