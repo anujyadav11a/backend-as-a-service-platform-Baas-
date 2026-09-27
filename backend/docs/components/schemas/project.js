@@ -1,28 +1,49 @@
 export const projectSchemas = {
   Project: {
     type: 'object',
-    required: ['projectId', 'name', 'ownerId', 'createdAt', 'updatedAt'],
+    required: ['id', 'project_id', 'name', 'status', 'created_at', 'updated_at'],
     properties: {
-      projectId: { type: 'string', pattern: '^proj_[a-zA-Z0-9]+$', example: 'proj_abc123' },
-      name: { type: 'string', example: 'My Project' },
+      id: { type: 'string', example: '64f1a2b3c4d5e6f7a8b9c0d1' },
+      project_id: { type: 'string', pattern: '^[a-f0-9]{8}$', example: 'abc123de' },
+      name: { type: 'string', minLength: 2, maxLength: 100, example: 'My Project' },
       description: { type: 'string', nullable: true, example: 'Project description' },
-      ownerId: { type: 'string', example: 'user_abc123' },
-      createdAt: { type: 'string', format: 'date-time' },
-      updatedAt: { type: 'string', format: 'date-time' }
+      api_key: { type: 'string', example: 'a1b2c3d4e5f6...' },
+      api_endpoint: { type: 'string', format: 'uri', example: 'http://localhost:20000/api/v1/abc123de' },
+      status: { type: 'string', enum: ['active', 'suspended', 'deleted'], example: 'active' },
+      config: {
+        type: 'object',
+        nullable: true,
+        properties: {
+          max_databases: { type: 'integer', minimum: 1, maximum: 50, example: 3 },
+          max_tables_per_db: { type: 'integer', minimum: 1, maximum: 500, example: 10 },
+          max_documents_per_table: { type: 'integer', minimum: 1, maximum: 100000, example: 1000 },
+          cors_origins: { type: 'array', items: { type: 'string' }, example: ['https://app.example.com'] }
+        }
+      },
+      usage: {
+        type: 'object',
+        nullable: true,
+        properties: {
+          api_requests: { type: 'integer', example: 150 },
+          storage_mb: { type: 'integer', example: 5 }
+        }
+      },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' }
     }
   },
   CreateProjectRequest: {
     type: 'object',
     required: ['name'],
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 100, example: 'My Project' },
+      name: { type: 'string', minLength: 2, maxLength: 100, example: 'My Project' },
       description: { type: 'string', maxLength: 500, nullable: true, example: 'Project description' }
     }
   },
   UpdateProjectRequest: {
     type: 'object',
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 100, example: 'Updated Project Name' },
+      name: { type: 'string', minLength: 2, maxLength: 100, example: 'Updated Project Name' },
       description: { type: 'string', maxLength: 500, nullable: true, example: 'Updated description' }
     }
   },
@@ -44,33 +65,37 @@ export const projectSchemas = {
       success: { type: 'boolean', example: true },
       data: {
         type: 'object',
-        required: ['projectId', 'apiKey', 'baseUrl'],
+        required: ['project_id', 'api_key', 'api_endpoint', 'project_name'],
         properties: {
-          projectId: { type: 'string', example: 'proj_abc123' },
-          apiKey: { type: 'string', example: 'baas_live_abc123...' },
-          baseUrl: { type: 'string', example: 'http://localhost:20000' }
+          project_id: { type: 'string', example: 'abc123de' },
+          api_key: { type: 'string', example: 'a1b2c3d4e5f6...' },
+          api_endpoint: { type: 'string', format: 'uri', example: 'http://localhost:20000/api/v1/abc123de' },
+          project_name: { type: 'string', example: 'My Project' }
         }
       }
     }
   },
   ApiKey: {
     type: 'object',
-    required: ['keyId', 'keyPrefix', 'name', 'createdAt', 'lastUsedAt'],
+    required: ['key_id', 'api_key', 'name', 'permissions', 'environment', 'revoked', 'created_at'],
     properties: {
-      keyId: { type: 'string', example: 'key_abc123' },
-      keyPrefix: { type: 'string', example: 'baas_live_ab' },
+      key_id: { type: 'string', example: 'key_abc123def456' },
+      api_key: { type: 'string', example: 'a1b2c3d4e5f6...' },
       name: { type: 'string', example: 'Production Key' },
-      createdAt: { type: 'string', format: 'date-time' },
-      lastUsedAt: { type: 'string', format: 'date-time', nullable: true },
-      expiresAt: { type: 'string', format: 'date-time', nullable: true }
+      permissions: { type: 'array', items: { type: 'string', enum: ['read', 'write', 'admin'] }, example: ['read', 'write'] },
+      environment: { type: 'string', enum: ['development', 'staging', 'production'], example: 'production' },
+      revoked: { type: 'boolean', example: false },
+      revoked_at: { type: 'string', format: 'date-time', nullable: true, example: null },
+      created_at: { type: 'string', format: 'date-time' }
     }
   },
   CreateApiKeyRequest: {
     type: 'object',
     required: ['name'],
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 50, example: 'Production Key' },
-      expiresInDays: { type: 'integer', minimum: 1, maximum: 365, nullable: true, example: 90 }
+      name: { type: 'string', minLength: 1, maxLength: 100, example: 'Production Key' },
+      permissions: { type: 'array', items: { type: 'string', enum: ['read', 'write', 'admin'] }, default: ['read'], example: ['read', 'write'] },
+      environment: { type: 'string', enum: ['development', 'staging', 'production'], default: 'development', example: 'production' }
     }
   },
   ApiKeyGenerateResponse: {
@@ -80,12 +105,13 @@ export const projectSchemas = {
       success: { type: 'boolean', example: true },
       data: {
         type: 'object',
-        required: ['keyId', 'apiKey', 'keyPrefix', 'name'],
+        required: ['key_id', 'api_key', 'name', 'permissions', 'environment'],
         properties: {
-          keyId: { type: 'string', example: 'key_abc123' },
-          apiKey: { type: 'string', example: 'baas_live_abc123xyz...' },
-          keyPrefix: { type: 'string', example: 'baas_live_ab' },
-          name: { type: 'string', example: 'Production Key' }
+          key_id: { type: 'string', example: 'key_abc123def456' },
+          api_key: { type: 'string', example: 'a1b2c3d4e5f6...' },
+          name: { type: 'string', example: 'Production Key' },
+          permissions: { type: 'array', items: { type: 'string', enum: ['read', 'write', 'admin'] }, example: ['read', 'write'] },
+          environment: { type: 'string', enum: ['development', 'staging', 'production'], example: 'production' }
         }
       }
     }
@@ -109,21 +135,21 @@ export const projectSchemas = {
   },
   ProjectConfig: {
     type: 'object',
-    required: ['maxDatabases', 'maxTablesPerDb', 'maxDocumentsPerTable', 'corsOrigins'],
+    required: ['max_databases', 'max_tables_per_db', 'max_documents_per_table', 'cors_origins'],
     properties: {
-      maxDatabases: { type: 'integer', minimum: 1, maximum: 50, example: 3 },
-      maxTablesPerDb: { type: 'integer', minimum: 1, maximum: 500, example: 10 },
-      maxDocumentsPerTable: { type: 'integer', minimum: 1, maximum: 100000, example: 1000 },
-      corsOrigins: { type: 'array', items: { type: 'string', format: 'uri' }, example: ['https://app.example.com', '*'] }
+      max_databases: { type: 'integer', minimum: 1, maximum: 50, example: 3 },
+      max_tables_per_db: { type: 'integer', minimum: 1, maximum: 500, example: 10 },
+      max_documents_per_table: { type: 'integer', minimum: 1, maximum: 100000, example: 1000 },
+      cors_origins: { type: 'array', items: { type: 'string' }, example: ['https://app.example.com', '*'] }
     }
   },
   UpdateProjectConfigRequest: {
     type: 'object',
     properties: {
-      maxDatabases: { type: 'integer', minimum: 1, maximum: 50, example: 5 },
-      maxTablesPerDb: { type: 'integer', minimum: 1, maximum: 500, example: 20 },
-      maxDocumentsPerTable: { type: 'integer', minimum: 1, maximum: 100000, example: 5000 },
-      corsOrigins: { type: 'array', items: { type: 'string', format: 'uri' }, example: ['https://app.example.com', 'https://admin.example.com'] }
+      max_databases: { type: 'integer', minimum: 1, maximum: 50, example: 5 },
+      max_tables_per_db: { type: 'integer', minimum: 1, maximum: 500, example: 20 },
+      max_documents_per_table: { type: 'integer', minimum: 1, maximum: 100000, example: 5000 },
+      cors_origins: { type: 'array', items: { type: 'string' }, example: ['https://app.example.com', 'https://admin.example.com'] }
     }
   }
 };

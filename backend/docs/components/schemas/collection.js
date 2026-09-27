@@ -1,21 +1,21 @@
 export const collectionSchemas = {
   Collection: {
     type: 'object',
-    required: ['collection_id', 'name', 'databaseId', 'createdAt', 'updatedAt'],
+    required: ['id', 'name', 'database_id', 'project_id', 'created_at', 'updated_at'],
     properties: {
-      collection_id: { type: 'string', example: 'col_abc123' },
+      id: { type: 'string', example: '64f1a2b3c4d5e6f7a8b9c0d1' },
       name: { type: 'string', example: 'users_collection' },
-      description: { type: 'string', nullable: true, example: 'Collection for user data' },
-      databaseId: { type: 'string', example: 'db_abc123' },
-      createdAt: { type: 'string', format: 'date-time' },
-      updatedAt: { type: 'string', format: 'date-time' }
+      database_id: { type: 'string', example: 'db_abc123' },
+      project_id: { type: 'string', example: 'proj_abc123' },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' }
     }
   },
   CreateCollectionRequest: {
     type: 'object',
     required: ['name'],
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z][a-zA-Z0-9_]*$', example: 'users_collection' },
+      name: { type: 'string', minLength: 1, maxLength: 255, example: 'users_collection' },
       description: { type: 'string', maxLength: 500, nullable: true, example: 'Collection for user data' }
     }
   },
@@ -25,8 +25,17 @@ export const collectionSchemas = {
     properties: {
       success: { type: 'boolean', example: true },
       data: {
-        type: 'array',
-        items: { $ref: '#/components/schemas/Collection' }
+        type: 'object',
+        required: ['database_id', 'project_id', 'total_collections', 'collections'],
+        properties: {
+          database_id: { type: 'string', example: 'db_abc123' },
+          project_id: { type: 'string', example: 'proj_abc123' },
+          total_collections: { type: 'integer', example: 5 },
+          collections: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Collection' }
+          }
+        }
       }
     }
   }

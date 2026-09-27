@@ -1,41 +1,33 @@
 export const attributeSchemas = {
   Attribute: {
     type: 'object',
-    required: ['attribute_id', 'name', 'type', 'collectionId', 'createdAt', 'updatedAt'],
+    required: ['id', 'name', 'type', 'required', 'collection_id', 'database_id', 'created_at', 'updated_at'],
     properties: {
-      attribute_id: { type: 'string', example: 'attr_abc123' },
+      id: { type: 'string', example: '64f1a2b3c4d5e6f7a8b9c0d1' },
       name: { type: 'string', example: 'email' },
-      type: { type: 'string', enum: ['VARCHAR', 'INT', 'TEXT', 'DATE', 'DATETIME', 'BOOLEAN', 'DECIMAL'], example: 'VARCHAR' },
-      size: { type: 'integer', nullable: true, example: 255 },
+      type: { type: 'string', example: 'VARCHAR(255)' },
       required: { type: 'boolean', example: true },
-      unique: { type: 'boolean', example: true },
-      defaultValue: { type: ['string', 'number', 'boolean'], nullable: true, example: null },
-      collectionId: { type: 'string', example: 'col_abc123' },
-      createdAt: { type: 'string', format: 'date-time' },
-      updatedAt: { type: 'string', format: 'date-time' }
+      collection_id: { type: 'string', example: 'col_abc123' },
+      database_id: { type: 'string', example: 'db_abc123' },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' }
     }
   },
   CreateAttributeRequest: {
     type: 'object',
     required: ['name', 'type'],
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z][a-zA-Z0-9_]*$', example: 'email' },
-      type: { type: 'string', enum: ['VARCHAR', 'INT', 'TEXT', 'DATE', 'DATETIME', 'BOOLEAN', 'DECIMAL'], example: 'VARCHAR' },
-      size: { type: 'integer', minimum: 1, maximum: 65535, nullable: true, example: 255 },
-      required: { type: 'boolean', default: false, example: true },
-      unique: { type: 'boolean', default: false, example: true },
-      defaultValue: { type: ['string', 'number', 'boolean'], nullable: true, example: null }
+      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$', example: 'email' },
+      type: { type: 'string', example: 'VARCHAR(255)' },
+      required: { type: 'boolean', default: false, example: true }
     }
   },
   UpdateAttributeRequest: {
     type: 'object',
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z][a-zA-Z0-9_]*$', example: 'email_address' },
-      type: { type: 'string', enum: ['VARCHAR', 'INT', 'TEXT', 'DATE', 'DATETIME', 'BOOLEAN', 'DECIMAL'], example: 'VARCHAR' },
-      size: { type: 'integer', minimum: 1, maximum: 65535, nullable: true, example: 300 },
-      required: { type: 'boolean', example: true },
-      unique: { type: 'boolean', example: true },
-      defaultValue: { type: ['string', 'number', 'boolean'], nullable: true, example: null }
+      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z_][a-zA-Z0-9_]*$', example: 'email_address' },
+      type: { type: 'string', example: 'VARCHAR(300)' },
+      required: { type: 'boolean', example: true }
     }
   },
   AttributeListResponse: {
@@ -44,8 +36,15 @@ export const attributeSchemas = {
     properties: {
       success: { type: 'boolean', example: true },
       data: {
-        type: 'array',
-        items: { $ref: '#/components/schemas/Attribute' }
+        type: 'object',
+        required: ['attributes', 'count'],
+        properties: {
+          attributes: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Attribute' }
+          },
+          count: { type: 'integer', example: 5 }
+        }
       }
     }
   },

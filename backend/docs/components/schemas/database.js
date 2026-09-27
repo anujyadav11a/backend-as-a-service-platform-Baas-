@@ -1,22 +1,20 @@
 export const databaseSchemas = {
   Database: {
     type: 'object',
-    required: ['database_id', 'name', 'projectId', 'createdAt', 'updatedAt'],
+    required: ['id', 'name', 'project_id', 'created_at', 'updated_at'],
     properties: {
-      database_id: { type: 'string', example: 'db_abc123' },
+      id: { type: 'string', example: '64f1a2b3c4d5e6f7a8b9c0d1' },
       name: { type: 'string', example: 'my_database' },
-      description: { type: 'string', nullable: true, example: 'Database description' },
-      projectId: { type: 'string', example: 'proj_abc123' },
-      createdAt: { type: 'string', format: 'date-time' },
-      updatedAt: { type: 'string', format: 'date-time' }
+      project_id: { type: 'string', example: 'proj_abc123' },
+      created_at: { type: 'string', format: 'date-time' },
+      updated_at: { type: 'string', format: 'date-time' }
     }
   },
   CreateDatabaseRequest: {
     type: 'object',
     required: ['name'],
     properties: {
-      name: { type: 'string', minLength: 1, maxLength: 64, pattern: '^[a-zA-Z][a-zA-Z0-9_]*$', example: 'my_database' },
-      description: { type: 'string', maxLength: 500, nullable: true, example: 'Database description' }
+      name: { type: 'string', minLength: 1, maxLength: 255, example: 'my_database' }
     }
   },
   DatabaseListResponse: {
@@ -25,8 +23,16 @@ export const databaseSchemas = {
     properties: {
       success: { type: 'boolean', example: true },
       data: {
-        type: 'array',
-        items: { $ref: '#/components/schemas/Database' }
+        type: 'object',
+        required: ['project_id', 'total_databases', 'databases'],
+        properties: {
+          project_id: { type: 'string', example: 'proj_abc123' },
+          total_databases: { type: 'integer', example: 2 },
+          databases: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Database' }
+          }
+        }
       }
     }
   }

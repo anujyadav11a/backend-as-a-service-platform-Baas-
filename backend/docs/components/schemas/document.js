@@ -1,13 +1,24 @@
 export const documentSchemas = {
   Document: {
     type: 'object',
-    required: ['documentId', 'createdAt', 'updatedAt'],
+    required: ['id', 'collection_id', 'data', 'created_at', 'project_id'],
     properties: {
-      documentId: { type: 'string', example: 'doc_abc123' },
-      createdAt: { type: 'string', format: 'date-time' },
-      updatedAt: { type: 'string', format: 'date-time' }
-    },
-    description: 'Dynamic document with fields defined by collection attributes. Additional properties allowed based on collection schema.'
+      id: { type: 'string', example: 'doc_1703123456789_abc123def' },
+      collection_id: { type: 'string', example: 'col_abc123' },
+      data: {
+        type: 'object',
+        additionalProperties: true,
+        description: 'Document fields matching collection attribute definitions',
+        example: {
+          name: 'John Doe',
+          email: 'john@example.com',
+          age: 30,
+          status: 'active'
+        }
+      },
+      created_at: { type: 'string', format: 'date-time' },
+      project_id: { type: 'string', example: 'proj_abc123' }
+    }
   },
   CreateDocumentRequest: {
     type: 'object',
@@ -47,43 +58,25 @@ export const documentSchemas = {
   },
   QueryDocumentsRequest: {
     type: 'object',
-    required: ['filters', 'sort', 'page', 'limit'],
+    required: ['filters'],
     properties: {
       filters: {
-        type: 'object',
-        description: 'Filter conditions using MongoDB-style operators',
-        additionalProperties: {
-          oneOf: [
-            { type: 'string' },
-            { type: 'number' },
-            { type: 'boolean' },
-            {
-              type: 'object',
-              properties: {
-                $eq: { type: ['string', 'number', 'boolean'] },
-                $ne: { type: ['string', 'number', 'boolean'] },
-                $gt: { type: ['string', 'number'] },
-                $gte: { type: ['string', 'number'] },
-                $lt: { type: ['string', 'number'] },
-                $lte: { type: ['string', 'number'] },
-                $like: { type: 'string', description: 'SQL LIKE pattern (e.g., "John%")' },
-                $in: { type: 'array', items: { type: ['string', 'number'] } }
-              }
-            }
-          ]
-        },
-        example: {
-          age: { $gte: 18, $lte: 65 },
-          status: 'active',
-          name: { $like: 'John%' }
+        type: 'array',
+        items: {
+          type: 'object',
+          required: ['field', 'operator'],
+          properties: {
+            field: { type: 'string', example: 'age' },
+            operator: { type: 'string', enum: ['equals', 'notEquals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'contains', 'notContains', 'startsWith', 'endsWith', 'in', 'notIn', 'isNull', 'isNotNull'], example: 'gte' },
+            value: { type: ['string', 'number', 'boolean', 'array'], description: 'Value to filter by (not required for isNull/isNotNull)' }
+          }
         }
       },
       sort: {
         type: 'object',
-        required: ['field', 'order'],
         properties: {
-          field: { type: 'string', example: 'createdAt' },
-          order: { type: 'string', enum: ['ASC', 'DESC'], example: 'DESC' }
+          field: { type: 'string', example: 'created_at' },
+          order: { type: 'string', enum: ['asc', 'desc'], example: 'desc' }
         }
       },
       page: { type: 'integer', minimum: 1, default: 1, example: 1 },
@@ -103,7 +96,17 @@ export const documentSchemas = {
             type: 'array',
             items: { $ref: '#/components/schemas/Document' }
           },
-          pagination: { $ref: '#/components/schemas/PaginationMeta' }
+          pagination: {
+            type: 'object',
+            required: ['currentPage', 'totalPages', 'totalDocuments', 'hasNextPage', 'hasPrevPage'],
+            properties: {
+              currentPage: { type: 'integer', example: 1 },
+              totalPages: { type: 'integer', example: 5 },
+              totalDocuments: { type: 'integer', example: 50 },
+              hasNextPage: { type: 'boolean', example: true },
+              hasPrevPage: { type: 'boolean', example: false }
+            }
+          }
         }
       }
     }
@@ -111,14 +114,20 @@ export const documentSchemas = {
   FilterOperators: {
     type: 'object',
     properties: {
-      $eq: { type: 'string', description: 'Equal to' },
-      $ne: { type: 'string', description: 'Not equal to' },
-      $gt: { type: 'string', description: 'Greater than' },
-      $gte: { type: 'string', description: 'Greater than or equal to' },
-      $lt: { type: 'string', description: 'Less than' },
-      $lte: { type: 'string', description: 'Less than or equal to' },
-      $like: { type: 'string', description: 'Pattern matching (SQL LIKE)' },
-      $in: { type: 'string', description: 'Value in array' }
+      equals: { type: 'string', description: 'Equal to' },
+      notEquals: { type: 'string', description: 'Not equal to' },
+      greaterThan: { type: 'string', description: 'Greater than' },
+      greaterThanOrEqual: { type: 'string', description: 'Greater than or equal to' },
+      lessThan: { type: 'string', description: 'Less than' },
+      lessThanOrEqual: { type: 'string', description: 'Less than or equal to' },
+      contains: { type: 'string', description: 'Contains substring' },
+      notContains: { type: 'string', description: 'Does not contain substring' },
+      startsWith: { type: 'string', description: 'Starts with' },
+      endsWith: { type: 'string', description: 'Ends with' },
+      in: { type: 'string', description: 'Value in array' },
+      notIn: { type: 'string', description: 'Value not in array' },
+      isNull: { type: 'string', description: 'Field is null' },
+      isNotNull: { type: 'string', description: 'Field is not null' }
     }
   }
 };
