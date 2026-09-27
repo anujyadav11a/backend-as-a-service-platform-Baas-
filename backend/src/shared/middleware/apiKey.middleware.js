@@ -11,24 +11,20 @@ import { checkRateLimit, RATE_LIMIT_CONFIGS } from './ratelimiter.middleware.js'
 export const apiKeyAuth = asyncHandler(async (req, res, next) => {
     try {
         // Get API key from header
-        const apiKey = req.header('X-API-Key') || req.header('Authorization')?.replace('Bearer ', '');
 
-        if (!apiKey) {
+        const api_Key = req.header('api-key');
+        console.log('API Key received:', api_Key); // Debugging log
+        if (!api_Key) {
             throw ApiError.unauthorized('API key is required');
         }
 
-        // Parse API key format: project.keyId.secret
-        const keyParts = apiKey.split('.');
-        if (keyParts.length !== 3) {
-            throw ApiError.unauthorized('Invalid API key format');
-        }
+        
 
-        const [projectSlug] = keyParts;
 
-        // Find project by slug
-        const project = await Project.findBySlug(projectSlug);
+        // Find project by api key
+        const project = await Project.findByApiKey(api_Key);
         if (!project) {
-            logger.warn('API key used for non-existent project', { projectSlug });
+            logger.warn('API key used for non-existent project', { api_Key });
             throw ApiError.unauthorized('Invalid API key');
         }
 
@@ -41,15 +37,8 @@ export const apiKeyAuth = asyncHandler(async (req, res, next) => {
             throw ApiError.forbidden('Project is not active');
         }
 
-        // Validate API key
-        const validatedKey = project.validateApiKey(apiKey);
-        if (!validatedKey) {
-            logger.warn('Invalid API key used', { 
-                projectId: project._id,
-                keyId: keyParts[1]
-            });
-            throw ApiError.unauthorized('Invalid API key');
-        }
+       
+        
 
         // Check rate limit for this project
         const projectId = project._id || project.id;
@@ -84,17 +73,25 @@ export const apiKeyAuth = asyncHandler(async (req, res, next) => {
         }
 
         // Update usage statistics
-        await project.updateUsageStats('api_request');
+        await project.updateUsage('api_request');
+
+        // Build minimal key info from the project (project-level key)
+        const keyInfo = {
+            key_id: project.api_key,
+            permissions: ['*'],
+            environment: 'production'
+        };
 
         // Attach project and API key info to request
         req.project = project;
-        req.apiKey = validatedKey;
+        req.apiKey = keyInfo;
         req.rateLimitInfo = rateLimitResult;
+       req.uese = project.owner // Simulate user context for project owner
 
         logger.info('API key authenticated successfully', {
             projectId: project._id,
-            keyId: validatedKey.key_id,
-            environment: validatedKey.environment,
+            keyId: keyInfo.key_id,
+            environment: keyInfo.environment,
             ip: req.ip,
             rateLimit: {
                 remaining: rateLimitResult.remaining,
