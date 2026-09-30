@@ -30,7 +30,7 @@ export function encrypt(text) {
     const algorithm = 'aes-256-gcm';
     const key = getEncryptionKey();
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, key);
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
     cipher.setAAD(Buffer.from('oauth-identity', 'utf8'));
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
@@ -58,7 +58,7 @@ export function decrypt(encryptedText) {
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
     
-    const decipher = crypto.createDecipher(algorithm, key);
+    const decipher = crypto.createDecipheriv(algorithm, key, iv);
     decipher.setAAD(Buffer.from('oauth-identity', 'utf8'));
     decipher.setAuthTag(authTag);
     
