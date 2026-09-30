@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRegister } from '../hooks/useAuth';
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -244,6 +245,20 @@ export function RegisterForm() {
             </button>
           </div>
         </form>
+
+        <div className="my-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <GoogleLoginButton />
+          </div>
+        </div>
 
         <div className="text-center">
           <p className="text-sm text-gray-600">
