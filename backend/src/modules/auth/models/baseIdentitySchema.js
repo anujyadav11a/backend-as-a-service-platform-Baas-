@@ -121,11 +121,10 @@ export const createIdentitySchema = (userRef, encryptTokens = false, cryptoUtils
         };
 
         // Pre-save middleware for encryption
-        identitySchema.pre('save', function(next) {
+        identitySchema.pre('save', async function() {
             if (this.isModified('refresh_token')) {
                 this.encryptSensitiveData();
             }
-            next();
         });
 
         // Post-find middleware for decryption
