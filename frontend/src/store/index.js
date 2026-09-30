@@ -12,6 +12,7 @@ export const store = configureStore({
     database: databaseReducer,
     collection: collectionReducer,
     attribute: attributereducer,
+    
   },
 });
 
