@@ -13,6 +13,15 @@ export const axiosInstance = axios.create({
   },
 });
 
+const ROOT_API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1')
+    .replace(/\/api\/v1$/, '');   // → http://localhost:8000
+export const axiosAuth = axios.create({
+    baseURL: ROOT_API_URL,
+    withCredentials: true,
+    timeout: 15000,
+    headers: { 'Content-Type': 'application/json' },
+});
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -45,4 +54,4 @@ axiosInstance.interceptors.response.use(
   }
 );
 
-export default axiosInstance;
+export default  axiosInstance;
