@@ -4,7 +4,7 @@ import { logger } from "./Logger.js";
 const SESSION_PREFIX = "session:";
 const OAUTH_STATE_PREFIX = "oauth_state:";
 const DEFAULT_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
-const OAUTH_STATE_TTL = 10 * 60; // 10 minutes in seconds
+const OAUTH_STATE_TTL = 15 * 60; // 15 minutes in seconds
 
 export class RedisSessionStore {
   static getSessionKey(sessionId) {
@@ -65,39 +65,94 @@ export class RedisSessionStore {
   }
 
   static async setOAuthState(state, data, ttl = OAUTH_STATE_TTL) {
-    try {
-      const key = this.getOAuthStateKey(state);
-      await redis.setex(key, ttl, JSON.stringify(data));
-      return true;
-    } catch (error) {
-      logger.error("Redis OAuth state set error", { state, error: error.message });
-      return false;
+    const maxRetries = 3;
+    const baseDelay = 50;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const key = this.getOAuthStateKey(state);
+            await redis.setex(key, ttl, JSON.stringify(data));
+            
+            // Verify the write
+            const verified = await redis.get(key);
+            if (verified) {
+                return true;
+            }
+            
+            logger.warn('OAuth state write verification failed, retrying', { 
+                state, 
+                attempt 
+            });
+        } catch (error) {
+            logger.error("Redis OAuth state set error", { 
+                state, 
+                error: error.message,
+                attempt 
+            });
+            
+            if (attempt === maxRetries) {
+                return false;
+            }
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, baseDelay * attempt));
     }
+    
+    return false;
   }
 
   static async getOAuthState(state) {
-    try {
-      const key = this.getOAuthStateKey(state);
-      const data = await redis.get(key);
-      if (!data) return null;
-      return JSON.parse(data);
-    } catch (error) {
-      logger.error("Redis OAuth state get error", { state, error: error.message });
-      return null;
+    const maxRetries = 2;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const key = this.getOAuthStateKey(state);
+            const data = await redis.get(key);
+            if (!data) return null;
+            return JSON.parse(data);
+        } catch (error) {
+            logger.error("Redis OAuth state get error", { 
+                state, 
+                error: error.message,
+                attempt 
+            });
+            
+            if (attempt === maxRetries) {
+                return null;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 50 * attempt));
+        }
     }
+    return null;
   }
 
   static async consumeOAuthState(state) {
-    try {
-      const key = this.getOAuthStateKey(state);
-      const data = await redis.get(key);
-      if (!data) return null;
-      await redis.del(key);
-      return JSON.parse(data);
-    } catch (error) {
-      logger.error("Redis OAuth state consume error", { state, error: error.message });
-      return null;
+    const maxRetries = 2;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const key = this.getOAuthStateKey(state);
+            const data = await redis.get(key);
+            if (!data) return null;
+            await redis.del(key);
+            return JSON.parse(data);
+        } catch (error) {
+            logger.error("Redis OAuth state consume error", { 
+                state, 
+                error: error.message,
+                attempt 
+            });
+            
+            if (attempt === maxRetries) {
+                return null;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 50 * attempt));
+        }
     }
+    return null;
   }
 }
 
