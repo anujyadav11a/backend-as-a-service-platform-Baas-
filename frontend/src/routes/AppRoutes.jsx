@@ -4,6 +4,7 @@ import { PublicRoute } from '../features/auth/guards/PublicRoute';
 import { ErrorBoundary } from '../features/dashboard/components/ErrorBoundary';
 import LoginForm from '../features/auth/components/LoginForm';
 import RegisterForm from '../features/auth/components/RegisterForm';
+import GoogleCallback from '../features/auth/components/GoogleCallback';
 import Dashboard from '../features/dashboard/components/Dashboard';
 import ProjectPage from '../features/project/components/ProjectPage';
 import DatabasePage from '../features/database/components/DatabasePage';
@@ -53,6 +54,14 @@ export function AppRoutes() {
           element={
             <PublicRoute>
               <RegisterForm />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/auth/google/callback"
+          element={
+            <PublicRoute>
+              <GoogleCallback />
             </PublicRoute>
           }
         />
