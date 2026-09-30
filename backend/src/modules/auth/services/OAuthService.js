@@ -21,7 +21,7 @@ export class OAuthService {
         this.userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
         this.authEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
     }
-
+   
     generateAuthUrl() {
         if (!this.clientId || !this.clientSecret || !this.redirectUri) {
             logger.error('Missing Google OAuth configuration', {
@@ -31,6 +31,7 @@ export class OAuthService {
             });
             throw ApiError.internal('OAuth configuration is incomplete');
         }
+       
 
         const state = crypto.randomBytes(32).toString('hex');
         
@@ -47,7 +48,7 @@ export class OAuthService {
         authUrl.searchParams.append('scope', scope);
         authUrl.searchParams.append('state', state);
         authUrl.searchParams.append('access_type', 'offline');
-        authUrl.searchParams.append('prompt', 'consent');
+        authUrl.searchParams.append('prompt', 'select_account');
 
         logger.info('Generated OAuth URL successfully', { state });
 
@@ -322,8 +323,7 @@ export class OAuthService {
                     provider_email: email,
                     is_primary: identity.is_primary,
                     connected_at: identity.createdAt
-                },
-                cookies: setAuthCookies(null, tokens, 'console')
+                }
             };
 
         } catch (error) {
