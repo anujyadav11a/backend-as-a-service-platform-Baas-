@@ -103,6 +103,18 @@ export const revokeUserSession = createAsyncThunk(
   }
 );
 
+export const handleGoogleCallback = createAsyncThunk(
+  'auth/googleCallback',
+  async ({ code, state }, { rejectWithValue }) => {
+    try {
+      const response = await authApi.handleGoogleCallback(code, state);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
@@ -152,6 +164,21 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.isAuthenticated = false;
+      })
+      .addCase(handleGoogleCallback.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(handleGoogleCallback.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.data?.user || null;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(handleGoogleCallback.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         state.isAuthenticated = false;
