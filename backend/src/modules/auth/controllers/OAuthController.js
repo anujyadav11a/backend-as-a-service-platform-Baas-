@@ -1,13 +1,28 @@
 import { OAuthService } from '../services/OAuthService.js';
 import { ApiResponse } from '../../../shared/utils/apiresponse.js';
-import { setOAuthState, consumeOAuthState } from '../../../middleware/googleauthsession.middleware.js';
+import { setOAuthState, consumeOAuthState, getOAuthState } from '../../../middleware/googleauthsession.middleware.js';
+import { setAuthCookies } from '../../../shared/utils/cookieUtils.js';
+import { ApiError } from '../../../shared/utils/apierror.js';
+import { logger } from '../../../shared/utils/Logger.js';
 
 export class OAuthController {
     static async redirectToGoogle(req, res) {
         const oauthService = new OAuthService();
         const { authUrl, state } = oauthService.generateAuthUrl();
 
-        await setOAuthState(state, { createdAt: Date.now() });
+        const stored = await setOAuthState(state, { createdAt: Date.now() });
+        if (!stored) {
+            logger.error('Failed to store OAuth state in Redis', { state });
+            throw ApiError.internal('Failed to initialize OAuth flow');
+        }
+
+        const verified = await getOAuthState(state);
+        if (!verified) {
+            logger.error('OAuth state verification failed after storage', { state });
+            throw ApiError.internal('Failed to verify OAuth state storage');
+        }
+
+        logger.info('OAuth state stored and verified', { state });
 
         const response = new ApiResponse(
             200,
@@ -20,13 +35,41 @@ export class OAuthController {
 
     static async handleCallback(req, res) {
         const { code, state, error } = req.query;
+
+        logger.info('OAuth callback received', { 
+            hasCode: !!code, 
+            hasState: !!state, 
+            hasError: !!error,
+            state: state 
+        });
+
+        if (error) {
+            logger.error('OAuth error from Google', { error });
+            throw ApiError.badRequest(`OAuth error: ${error}`);
+        }
+
         const sessionOauthState = await consumeOAuthState(state);
+
+        logger.info('OAuth state consumed', { 
+            state, 
+            found: !!sessionOauthState 
+        });
+
+        if (!sessionOauthState) {
+            const existing = await getOAuthState(state);
+            logger.error('CSRF validation failed', { 
+                providedState: state, 
+                hasSessionState: false,
+                stateStillExists: !!existing
+            });
+            throw ApiError.badRequest('Invalid state parameter - CSRF protection failed. Please try logging in again.');
+        }
 
         const oauthService = new OAuthService();
         const result = await oauthService.handleCallback({ 
             code, 
             state, 
-            sessionOauthState: !!sessionOauthState,
+            sessionOauthState: true,
             req 
         });
 
@@ -41,9 +84,8 @@ export class OAuthController {
             'Google OAuth authentication successful'
         );
 
-        return res
-            .status(response.statuscode)
-            .json(result.cookies(res, result));
+        setAuthCookies(res, result.tokens, 'console');
+        return res.status(response.statuscode).json(response);
     }
 
     static async refreshAccessToken(req, res) {
