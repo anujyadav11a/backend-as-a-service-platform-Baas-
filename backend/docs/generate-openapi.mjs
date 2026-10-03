@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Import the options using dynamic import since they're ES modules
 const { securitySchemes } = await import('./components/security.js');
-const { responses } = await import('./components/responses/index.js');
+
 const { schemas } = await import('./components/schemas/index.js');
 const { parameters } = await import('./components/parameters.js');
 

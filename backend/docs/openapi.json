@@ -51,7 +51,6 @@
         "description": "Project ID for tenant registration/login operations. Obtain from Project SDK details."
       }
     },
-    "responses": {},
     "schemas": {
       "RegisterRequest": {
         "type": "object",
@@ -2783,7 +2782,7 @@
         }
       }
     },
-    "/api/v1/{project_id}/collections/{collection_id}/documents": {
+    "/api/v1/projects/{project_id}/collections/{collection_id}/documents": {
       "post": {
         "tags": [
           "Documents"
@@ -2927,7 +2926,7 @@
         }
       }
     },
-    "/api/v1/{project_id}/collections/{collection_id}/documents/query": {
+    "/api/v1/projects/{project_id}/collections/{collection_id}/documents/query": {
       "post": {
         "tags": [
           "Documents"
@@ -3004,7 +3003,7 @@
         }
       }
     },
-    "/api/v1/{project_id}/collections/{collection_id}/documents/{document_id}": {
+    "/api/v1/projects/{project_id}/collections/{collection_id}/documents/{document_id}": {
       "get": {
         "tags": [
           "Documents"
