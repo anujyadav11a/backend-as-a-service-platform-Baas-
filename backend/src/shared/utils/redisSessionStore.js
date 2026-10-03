@@ -154,6 +154,81 @@ export class RedisSessionStore {
     }
     return null;
   }
+
+  static getOAuthCodeKey(code) {
+    return `oauth_code:${code}`;
+  }
+
+  static async markCodeProcessed(code, sessionData, ttl = 600) {
+    const maxRetries = 2;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const key = this.getOAuthCodeKey(code);
+            await redis.setex(key, ttl, JSON.stringify(sessionData));
+            
+            const verified = await redis.get(key);
+            if (verified) {
+                return true;
+            }
+            
+            logger.warn('OAuth code cache write verification failed, retrying', { 
+                code, 
+                attempt 
+            });
+        } catch (error) {
+            logger.error("Redis markCodeProcessed error", { 
+                code, 
+                error: error.message,
+                attempt 
+            });
+            
+            if (attempt === maxRetries) {
+                return false;
+            }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 50 * attempt));
+    }
+    
+    return false;
+  }
+
+  static async getProcessedCode(code) {
+    const maxRetries = 2;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const key = this.getOAuthCodeKey(code);
+            const data = await redis.get(key);
+            if (!data) return null;
+            return JSON.parse(data);
+        } catch (error) {
+            logger.error("Redis getProcessedCode error", { 
+                code, 
+                error: error.message,
+                attempt 
+            });
+            
+            if (attempt === maxRetries) {
+                return null;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 50 * attempt));
+        }
+    }
+    return null;
+  }
+
+  static async isCodeProcessed(code) {
+    try {
+      const key = this.getOAuthCodeKey(code);
+      return await redis.exists(key) === 1;
+    } catch (error) {
+      logger.error("Redis isCodeProcessed error", { code, error: error.message });
+      return false;
+    }
+  }
 }
 
 export default RedisSessionStore;
