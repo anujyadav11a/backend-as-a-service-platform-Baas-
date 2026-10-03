@@ -1,7 +1,7 @@
 import express from 'express';
 import { redis } from '../shared/config/redis.config.js';
 import { ApiError } from '../shared/utils/apierror.js';
-import { asyncHandler } from '../shared/utils/asynchandler.js';
+import { asyncHandler } from '../shared/utils/asyncHandler.js';
 
 const router = express.Router();
 

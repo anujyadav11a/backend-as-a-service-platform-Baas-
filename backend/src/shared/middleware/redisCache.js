@@ -6,7 +6,7 @@
 
 
 import { redis } from "../config/redis.config.js";
-import { asyncHandler } from "../utils/asynchandler.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
 export const cacheMiddleware = (prefix) => asyncHandler(async (req, res, next) => {

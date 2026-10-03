@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../../modules/auth/models/User.js';
 import { ApiError } from '../utils/apierror.js';
 import { logger } from '../utils/Logger.js';
-import { asyncHandler } from "../utils/asynchandler.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { COOKIE_NAMES, accessTokenCookieOptions, refreshTokenCookieOptions } from '../utils/cookieUtils.js';
 import config from '../config/env.js';
 import { redis } from '../config/redis.config.js';

@@ -3,7 +3,7 @@ import { TenantUser } from '../modules/auth/models/TenantUser.js';
 import { TenantSession } from '../modules/auth/models/TenantSession.js';
 import { ApiError } from '../shared/utils/apierror.js';
 import { logger } from '../shared/utils/Logger.js';
-import { asyncHandler } from '../shared/utils/asynchandler.js';
+import { asyncHandler } from '../shared/utils/asyncHandler.js';
 import { COOKIE_NAMES, accessTokenCookieOptions } from '../shared/utils/cookieUtils.js';
 import config from '../shared/config/env.js';
 

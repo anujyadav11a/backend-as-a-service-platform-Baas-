@@ -1,6 +1,6 @@
 import { Project } from "../../modules/project/models/Project.js";
 import { ApiError } from "../../shared/utils/apierror.js";
-import { asyncHandler } from "../../shared/utils/asynchandler.js";
+import { asyncHandler } from "../../shared/utils/asyncHandler.js";
 import { logger } from "../../shared/utils/Logger.js";
 
 /**

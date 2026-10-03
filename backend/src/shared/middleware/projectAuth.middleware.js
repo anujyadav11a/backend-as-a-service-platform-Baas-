@@ -1,6 +1,6 @@
 import { Project } from '../../modules/project/models/Project.js';
 import { ApiError } from '../utils/apierror.js';
-import { asyncHandler } from '../utils/asynchandler.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
 export const requireProjectAccess = asyncHandler(async (req, res, next) => {
     const projectId = req.params.project_id;
