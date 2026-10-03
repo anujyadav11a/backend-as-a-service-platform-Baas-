@@ -8,6 +8,8 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.docker
+.env.ec2.docker
 
 # IDE and editor files
 .vscode/
