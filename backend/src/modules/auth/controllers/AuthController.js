@@ -38,7 +38,7 @@ export class AuthController {
     }
 
     static async refreshToken(req, res) {
-        const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+        const refreshToken = req.cookies?.RefreshToken || req.body?.refreshToken;
         
         if (!refreshToken) {
             const response = new ApiResponse(400, null, "Refresh token is required");
