@@ -4,6 +4,18 @@ import config from '../config/env.js';
 
 const isProduction = config.app.isProduction;
 
+const cookieSecure = process.env.COOKIE_SECURE !== undefined 
+    ? process.env.COOKIE_SECURE === 'true' 
+    : isProduction;
+
+// For cross-origin (local frontend -> remote backend), use 'none' with secure=true
+// For same-site, 'lax' is sufficient. Default to 'lax' for production.
+const cookieSameSite = process.env.COOKIE_SAME_SITE || (isProduction ? 'lax' : 'lax');
+
+const cookiePartitioned = process.env.COOKIE_PARTITIONED !== undefined
+    ? process.env.COOKIE_PARTITIONED === 'true'
+    : isProduction;
+
 /**
  * Canonical cookie names — single source of truth for setting & reading.
  */
@@ -25,9 +37,9 @@ export const COOKIE_NAMES = {
  */
 export const baseCookieOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
-    partitioned: isProduction,
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
+    partitioned: cookiePartitioned,
 };
 
 /**
@@ -59,9 +71,9 @@ export const sessionCookieOptions = {
  */
 export const clearCookieOptions = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
-    partitioned: isProduction,
+    secure: cookieSecure,
+    sameSite: cookieSameSite,
+    partitioned: cookiePartitioned,
 };
 
 /**
