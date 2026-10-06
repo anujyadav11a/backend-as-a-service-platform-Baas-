@@ -1,0 +1,85 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and Deploy Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Backend to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+          script: |
+            set -e
+
+            echo "======================================"
+            echo "Starting backend deployment"
+            echo "======================================"
+
+            echo "Moving to project directory..."
+
+            cd /home/${{ secrets.SSH_USER }}/project/BAAS
+
+            echo "Pulling latest code..."
+
+            git pull origin main
+
+            echo "Moving to backend directory..."
+
+            cd backend
+
+            echo "Building backend Docker image..."
+
+            sudo docker build -t baas-backend .
+
+            echo "Stopping old backend container..."
+
+            sudo docker stop baas-backend || true
+
+            echo "Removing old backend container..."
+
+            sudo docker rm baas-backend || true
+
+            echo "Creating Docker network if it does not exist..."
+
+            sudo docker network inspect baas-network >/dev/null 2>&1 || \
+              sudo docker network create baas-network
+
+            echo "Starting new backend container..."
+
+            sudo docker run -d \
+              --name baas-backend \
+              -p 8000:3000 \
+              --network baas-network \
+              --env-file /home/${{ secrets.SSH_USER }}/project/BAAS/backend/.env.docker \
+              --restart unless-stopped \
+              baas-backend
+
+            echo "Cleaning unused Docker images..."
+
+            sudo docker image prune -f
+
+            echo "Checking backend container..."
+
+            sudo docker ps --filter "name=baas-backend"
+
+            echo "Showing latest backend logs..."
+
+            sudo docker logs --tail 30 baas-backend
+
+            echo "======================================"
+            echo "Backend deployment completed!"
+            echo "======================================"
