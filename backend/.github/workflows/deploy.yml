@@ -1,0 +1,94 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  checkout:
+    name: Checkout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build Docker image
+        run: docker build -t baas-backend .
+
+      - name: Save Docker image
+        run: docker save baas-backend | gzip > baas-backend.tar.gz
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: baas-backend.tar.gz
+          retention-days: 1
+
+  deploy:
+    name: Deploy
+    needs: checkout
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: .
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy Docker image to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no baas-backend.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/baas-backend.tar.gz
+
+      - name: Deploy on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            # Load the new image
+            docker load < /home/${{ secrets.SSH_USER }}/baas-backend.tar.gz
+
+            # Stop and remove old container
+            docker stop baas-backend || true
+            docker rm baas-backend || true
+
+            # Create network if not exists
+            docker network create baas-network || true
+
+            # Run new container
+            docker run -d \
+              --name baas-backend \
+              -p 8000:3000 \
+              --network baas-network \
+              --env-file /home/${{ secrets.SSH_USER }}/project/backend/.env.docker \
+              --restart unless-stopped \
+              baas-backend
+
+            # Clean up old images
+            docker image prune -f
+          EOF
