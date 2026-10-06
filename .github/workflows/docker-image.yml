@@ -1,94 +1,85 @@
-name: Deploy
+name: Deploy Backend
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+    paths:
+      - "backend/**"
+
   workflow_dispatch:
 
 jobs:
-  checkout:
-    name: Checkout
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run typecheck
-        run: npm run typecheck
-
-      - name: Build application
-        run: npm run build
-
-      - name: Build Docker image
-        run: docker build -t baas-backend .
-
-      - name: Save Docker image
-        run: docker save baas-backend | gzip > baas-backend.tar.gz
-
-      - name: Upload Docker image
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: baas-backend.tar.gz
-          retention-days: 1
-
   deploy:
-    name: Deploy
-    needs: checkout
+    name: Build and Deploy Backend
     runs-on: ubuntu-latest
-    environment: production
+
     steps:
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
+      - name: Deploy Backend to EC2
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          name: docker-image
-          path: .
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
 
-      - name: Copy Docker image to EC2
-        run: |
-          scp -o StrictHostKeyChecking=no baas-backend.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/baas-backend.tar.gz
+            echo "======================================"
+            echo "Starting backend deployment"
+            echo "======================================"
 
-      - name: Deploy on EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-            # Load the new image
-            docker load < /home/${{ secrets.SSH_USER }}/baas-backend.tar.gz
+            echo "Moving to project directory..."
 
-            # Stop and remove old container
-            docker stop baas-backend || true
-            docker rm baas-backend || true
+            cd /home/${{ secrets.SSH_USER }}/project/BAAS
 
-            # Create network if not exists
-            docker network create baas-network || true
+            echo "Pulling latest code..."
 
-            # Run new container
-            docker run -d \
+            git pull origin main
+
+            echo "Moving to backend directory..."
+
+            cd backend
+
+            echo "Building backend Docker image..."
+
+            sudo docker build -t baas-backend .
+
+            echo "Stopping old backend container..."
+
+            sudo docker stop baas-backend || true
+
+            echo "Removing old backend container..."
+
+            sudo docker rm baas-backend || true
+
+            echo "Creating Docker network if it does not exist..."
+
+            sudo docker network inspect baas-network >/dev/null 2>&1 || \
+              sudo docker network create baas-network
+
+            echo "Starting new backend container..."
+
+            sudo docker run -d \
               --name baas-backend \
               -p 8000:3000 \
               --network baas-network \
-              --env-file /home/${{ secrets.SSH_USER }}/project/backend/.env.docker 
+              --env-file /home/${{ secrets.SSH_USER }}/project/BAAS/backend/.env.docker \
               --restart unless-stopped \
               baas-backend
 
-            # Clean up old images
-            docker image prune -f
-          EOF
+            echo "Cleaning unused Docker images..."
+
+            sudo docker image prune -f
+
+            echo "Checking backend container..."
+
+            sudo docker ps --filter "name=baas-backend"
+
+            echo "Showing latest backend logs..."
+
+            sudo docker logs --tail 30 baas-backend
+
+            echo "======================================"
+            echo "Backend deployment completed!"
+            echo "======================================"
