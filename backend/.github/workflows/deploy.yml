@@ -85,7 +85,7 @@ jobs:
               --name baas-backend \
               -p 8000:3000 \
               --network baas-network \
-              --env-file /home/${{ secrets.SSH_USER }}/project/backend/.env.docker \
+              --env-file /home/${{ secrets.SSH_USER }}/project/backend/.env.docker 
               --restart unless-stopped \
               baas-backend
 
