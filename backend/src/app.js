@@ -21,6 +21,8 @@ import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 import path from 'path';
 
+
+
 const specPath = path.join(process.cwd(), 'docs', 'openapi.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 
