@@ -19,6 +19,7 @@ const asyncHandler = (requestHandler) => {
             next(error);
         }
     };
-};
+}; 
+
 
 export { asyncHandler };
