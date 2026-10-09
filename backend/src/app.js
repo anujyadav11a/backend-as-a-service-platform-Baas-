@@ -26,42 +26,11 @@ import path from 'path';
 const specPath = path.join(process.cwd(), 'docs', 'openapi.json');
 const swaggerDocument = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 
-// Parse CORS origins from env (comma-separated)
-const configuredOrigins = config.app.corsOrigin
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean);
 
-// Dynamic origin function: allows configured origins + common local dev origins in non-production
-const corsOriginFn = (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-
-    // Check configured origins
-    if (configuredOrigins.includes(origin)) {
-        return callback(null, true);
-    }
-
-    // In development, also allow common local frontend origins
-    if (!config.app.isProduction) {
-        const localDevOrigins = [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:8080',
-            'http://127.0.0.1:3000',
-            'http://127.0.0.1:5173',
-            'http://127.0.0.1:8080',
-        ];
-        if (localDevOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-    }
-
-    callback(new Error(`CORS: Origin ${origin} not allowed`), false);
-};
 
 const corsOptions = {
-    origin: corsOriginFn,
+    origin: 'http://16.4.19.207:5173',
+
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'project-id', 'api-key'],
